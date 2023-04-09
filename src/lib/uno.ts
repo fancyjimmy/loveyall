@@ -46,12 +46,10 @@ class Player {
     }
 
     playCard(card: Card) {
-        console.log(this, "played", card);
         this.game.takeAction(new Action(this, "play", card));
     }
 
     drawCard() {
-        console.log(this, "drew a card");
         this.game.takeAction(new Action(this, "draw", null));
     }
 
@@ -107,6 +105,7 @@ class Deck {
         const colors = Object.values(Colors).filter(color => color !== "black");
         return colors[Math.floor(Math.random() * (colors.length))];
     }
+
     randomColor(): Color {
         const colors = Object.values(Colors);
         return colors[Math.floor(Math.random() * colors.length)];
@@ -234,7 +233,6 @@ class Game {
             if (card.type === "reverse") {
                 this.currentPlayDirection = this.currentPlayDirection === "forward" ? "backward" : "forward";
             }
-            console.log(this.drawStack);
 
             if (this.drawStack > 0) {
                 if (card.type === "draw4" && this.tos.type === "draw4") {
@@ -245,13 +243,16 @@ class Game {
                     this.makeDraw(player, this.drawStack);
                     this.drawStack = 0;
                 }
-            } else {
-                if (card.type === "draw4") {
-                    this.drawStack += 4;
-                } else if (card.type === "draw2") {
-                    this.drawStack += 2;
-                }
             }
+            if (card.type === "draw4") {
+                this.drawStack = 4;
+            }
+
+            if (card.type === "draw2") {
+                this.drawStack = 2;
+            }
+
+
             this.cardHistory.push(card);
             player.played(card);
             this.nextPlayer();
@@ -273,9 +274,6 @@ class Game {
         } else {
             this.currentPlayerIndex = mod(this.currentPlayerIndex - 1, this.players.length);
         }
-
-        console.log(`Current player: ${this.currentPlayer.name}`);
-        console.log(this.tos);
     }
 
     private draw(player: Player) {
