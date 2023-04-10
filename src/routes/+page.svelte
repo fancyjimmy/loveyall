@@ -5,12 +5,11 @@
     let game = f;
 
 
-    if (browser){
+    if (browser) {
         setInterval(() => {
             game = game;
         }, 1000);
     }
-
 </script>
 
 <h1>Uno</h1>
@@ -21,7 +20,6 @@
         {#each game.players as player }
             <div class:active-player={game.currentPlayer === player} class="player">
                 <h2>{player.name} #{player.hand.length}</h2>
-
                 <ul>
                     {#each player.hand as card, i}
                         <li class="{card.color} uno-card" on:click={() => {

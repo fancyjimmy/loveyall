@@ -1,7 +1,6 @@
 import type {Card} from "./Card";
-import type {PlayDirection, PlayerAction, PlayerActionInfo} from "./GameAction";
+import type GameAction, {PlayDirection, PlayerAction, PlayerActionInfo} from "./GameAction";
 import type Player from "./Player";
-import type GameAction from "./GameAction";
 import Deck from "./Deck";
 
 
@@ -98,14 +97,21 @@ export default class Game {
                 } else {
                     this.makeDraw(player, this.drawStack);
                     this.drawStack = 0;
-                }
-            }
-            if (card.type === "draw4") {
-                this.drawStack = 4;
-            }
 
-            if (card.type === "draw2") {
-                this.drawStack = 2;
+                    if (card.type === "draw4") {
+                        this.drawStack += 4;
+                    } else if (card.type === "draw2") {
+                        this.drawStack += 2;
+                    }
+                }
+            } else {
+                if (card.type === "draw4") {
+                    this.drawStack += 4;
+                }
+
+                if (card.type === "draw2") {
+                    this.drawStack += 2;
+                }
             }
 
 
