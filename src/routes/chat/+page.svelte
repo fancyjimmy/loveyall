@@ -6,11 +6,18 @@
     let rooms = [];
 
     onMount(() => {
-        io.emit("chatRoom:getRooms");
+        io.emit("chatRoom:get");
 
         io.on("rooms", (updatedRooms) => {
             rooms = updatedRooms;
         });
+
+
+        return () => {
+            io.emit("chatRoom:leave");
+            io.off("rooms");
+        }
+
     });
     let textfield = "";
 

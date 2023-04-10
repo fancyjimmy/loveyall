@@ -3,11 +3,13 @@ import type {Server as HttpServer} from 'http';
 
 
 import {ServerChatHandler, ServerChatRoomHandler} from "./lib/chat";
+import {DebugHandler} from "./lib/debug";
 
 
 const serverHandlers = [
     new ServerChatHandler("general", false),
-    new ServerChatRoomHandler()
+    new ServerChatRoomHandler(),
+    new DebugHandler(),
 ]
 
 

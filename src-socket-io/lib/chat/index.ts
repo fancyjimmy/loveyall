@@ -1,5 +1,6 @@
 import {ServerHandler} from "../socket/ServerHandler";
 import type {Server, Socket} from "socket.io";
+import {logger} from "../Logging";
 
 type ChatHandler = {
     join: {
@@ -16,7 +17,8 @@ type ChatRoomHandler = {
     create: {
         name: string;
     },
-    getRooms: null
+    get: null,
+    leave: null,
 }
 
 export class ServerChatRoomHandler extends ServerHandler<ChatRoomHandler> {
@@ -31,30 +33,37 @@ export class ServerChatRoomHandler extends ServerHandler<ChatRoomHandler> {
         io.on("connection", listener);
 
         room.whenClosing(() => {
-            console.log(room.roomName + " closing room")
+            logger.log("chatroom", `room ${room.roomName} was closed`)
             this.rooms.delete(room.roomName);
             io.off("connection", listener);
-            io.to(this.nameSpace).emit("rooms", Array.from(this.rooms.keys()));
+            this.broadcastRoomChange(io);
         });
+    }
+
+    broadcastRoomChange(io: Server) {
+        io.to(this.nameSpace).emit("rooms", Array.from(this.rooms.keys()));
     }
 
     constructor() {
         super("chatRoom", {
             create: ({name}, socket, io) => {
                 if (this.rooms.has(name)) {
+                    logger.log("chatroom", `room ${name} already exists`)
                     return;
                 } else {
+                    logger.log("chatroom", `room ${name} created`)
                     const room = new ServerChatHandler(name, true);
                     this.rooms.set(room.roomName, room);
                     this.listenToChatRoom(io, room);
-
-                    io.to(this.nameSpace).emit("rooms", Array.from(this.rooms.keys()));
-                    console.log(name + " room created");
                 }
             },
-            getRooms: (data, socket, io) => {
+            get: (data, socket, io) => {
                 socket.emit("rooms", Array.from(this.rooms.keys()));
+                this.broadcastRoomChange(io);
                 socket.join(this.nameSpace);
+            },
+            leave: (data, socket, io) => {
+                socket.leave(this.nameSpace);
             }
         });
     }
@@ -101,8 +110,10 @@ export class ServerChatHandler extends ServerHandler<ChatHandler> {
         if (temporary) {
             // if it is temporary and somebody created it, but didn't join it, it will be deleted after 1 minute
             setTimeout(() => {
-                if (this.userSockets.size === 0)
+                if (this.userSockets.size === 0) {
+                    logger.log("chatroom", `room ${this.roomName} was closed because it was temporary and nobody even joined`);
                     this.closeCallback();
+                }
             }, 1000 * 60);
         }
     }
@@ -132,13 +143,14 @@ export class ServerChatHandler extends ServerHandler<ChatHandler> {
         this.userSockets.delete(socket.id);
         if (this.userSockets.size === 0 && this.temporary) {
             this.closeCallback();
+            logger.log("chatroom", `room ${this.roomName} was closed because it was temporary and everybody left`);
         }
     }
 
     setClientName(socket: Socket, name: string) {
         socket.emit("name", name);
-        console.log(this.roomName + " new User: " + name);
         this.userSockets.set(socket.id, name);
+        logger.log("chat", `${name} joined room ${this.roomName}`);
     }
 
     userNameTaken(name: string) {
@@ -156,6 +168,7 @@ export class ServerChatHandler extends ServerHandler<ChatHandler> {
     sendMessage(socket: Socket, message: string) {
         const user = this.getUser(socket);
         socket.to(this.roomName).emit("message", {message, user, time: Date.now()});
+        logger.log("chat", `${user} sent message in room ${this.roomName}: ${message}`);
     }
 
 }
