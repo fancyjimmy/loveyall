@@ -1,7 +1,8 @@
 import type {Card} from "./Card";
-import type GameAction, {PlayDirection, PlayerAction, PlayerActionInfo} from "./GameAction";
+import type {PlayDirection, PlayerAction, PlayerActionInfo} from "./GameAction";
 import type Player from "./Player";
 import Deck from "./Deck";
+import type GameAction from "./GameAction";
 
 
 function mod(n: number, m: number): number {
