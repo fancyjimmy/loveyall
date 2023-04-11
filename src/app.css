@@ -1,3 +1,44 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer base {
+    html {
+        scroll-behavior: smooth;
+        --scrollbar-secondary: #1e1e1e;
+        --scrollbar-primary: #f5f5f5;
+        --scrollbar-width: 15px;
+    }
+
+    /* Firefox */
+    * {
+        scrollbar-width: thin;
+        scrollbar-color: var(--scrollbar-secondary) var(--scrollbar-primary);
+    }
+
+    /* Chrome, Edge, and Safari */
+    *::-webkit-scrollbar {
+        width: 15px;
+    }
+
+    *::-webkit-scrollbar-track {
+        background: var(--scrollbar-primary);
+        border-radius: 5px;
+    }
+
+    *::-webkit-scrollbar-thumb {
+        background-color: var(--scrollbar-secondary);
+        border-radius: 14px;
+        border: 3px solid var(--scrollbar-primary);
+    }
+}
+
+@layer utilities {
+    .scrollbar-hidden {
+        --scrollbar-width: none;
+    }
+
+    .scrollbar-hidden::-webkit-scrollbar {
+        display: none;
+    }
+}

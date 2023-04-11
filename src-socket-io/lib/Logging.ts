@@ -73,7 +73,10 @@ export const logger = {
 
     listen: (func: (log: Log) => void) => {
         logger.listeners.push(func);
-    }
+    },
 
+    unListen: (func: (log: Log) => void) => {
+        logger.listeners = logger.listeners.filter(f => f !== func);
+    }
 
 };

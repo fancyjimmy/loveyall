@@ -3,7 +3,10 @@ import {Log, logger} from "../Logging";
 import type {Socket} from "socket.io";
 
 type Debug = {
-    get: string;
+    get: {
+        command: string,
+        runDangerously: boolean
+    };
 }
 
 const commands: { [commandName: string]: any } = {
@@ -56,9 +59,25 @@ const commands: { [commandName: string]: any } = {
 }
 
 export class DebugHandler extends ServerHandler<Debug> {
+    private debugListeners: { [socketId: string]: (log: Log) => void } = {};
+
     constructor() {
         super("debug", {
-            get: (command, socket, io) => {
+            get: ({command, runDangerously}, socket, io) => {
+
+                if (runDangerously) {
+                    try {
+                        //TODO remove in Production FR FR VERI IMPORTANTO
+                        const result = eval(command);
+                        this.emitLogs(socket, [new Log("command", JSON.stringify(result), {severity: 0})]);
+                    } catch (e) {
+                        if (e instanceof Error)
+                            this.emitError(socket, e.message);
+                        else
+                            this.emitError(socket, JSON.stringify(e));
+                    }
+                    return;
+                }
                 let parts = command.split(" ");
                 let commandName = parts[0].trim();
                 if (Object.keys(commands).includes(commandName)) {
@@ -77,19 +96,34 @@ export class DebugHandler extends ServerHandler<Debug> {
 
 
                 if (command.startsWith("listen")) {
-                    logger.listen((log: Log) => {
+                    if (this.debugListeners[socket.id] !== undefined) {
+                        this.emitError(socket, "Already listening");
+                        return;
+                    }
+                    this.emitLogs(socket, logger.logs);
+                    const listener = (log: Log) => {
                         if (socket.rooms.has(this.nameSpace)) {
                             this.emitLogUpdate(socket, log);
                         }
-                    });
+                    };
+
+                    logger.listen(listener);
+                    this.debugListeners[socket.id] = listener;
+
                     socket.join(this.nameSpace);
                 }
+
+
                 if (command.startsWith("unlisten")) {
+                    logger.unListen(this.debugListeners[socket.id]);
+                    delete this.debugListeners[socket.id];
                     socket.leave(this.nameSpace);
                 }
 
             }
         });
+
+
     }
 
     emitLogs(socket: Socket, logs: Log[]) {

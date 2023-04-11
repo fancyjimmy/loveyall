@@ -38,7 +38,12 @@
     }
 
     function askDebug() {
-        io.emit('debug:get', textfield.trim());
+        if (textfield.trim() === "cls") {
+            log = [];
+            textfield = '';
+            return;
+        }
+        io.emit('debug:get', {command: textfield.trim(), runDangerously});
         textfield = '';
     }
 
@@ -70,6 +75,7 @@
     afterUpdate(() => {
         if (autoscroll) output.scrollTo(0, output.scrollHeight);
     });
+    let runDangerously = false;
 </script>
 
 {#if dev}
@@ -142,6 +148,8 @@
                 >
                     <Icon icon="ic:round-send"/>
                 </button>
+
+                <input type="checkbox" bind:checked={runDangerously}>
             </div>
         </div>
     </div>

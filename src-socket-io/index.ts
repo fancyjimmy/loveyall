@@ -27,8 +27,6 @@ export default function injectSocketIO(server: HttpServer) {
                 handler.registerSocket(io, socket);
             }
         );
-
-
     });
 
     console.log('SocketIO injected');
