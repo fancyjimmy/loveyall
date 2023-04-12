@@ -42,7 +42,11 @@ export class ServerHandler<T> implements ServerSocketHandler {
 
     unregister(socket: Socket) {
         for (let key in this.listeners) {
-            socket.off(key, this.listeners[key][socket.id]);
+            try {
+                socket.off(key, this.listeners[key][socket.id]);
+            } catch (e) {
+                console.error(e);
+            }
         }
     }
 

@@ -1,3 +1,4 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -23,22 +24,59 @@
 
     *::-webkit-scrollbar-track {
         background: var(--scrollbar-primary);
-        border-radius: 5px;
     }
 
     *::-webkit-scrollbar-thumb {
         background-color: var(--scrollbar-secondary);
-        border-radius: 14px;
         border: 3px solid var(--scrollbar-primary);
     }
 }
 
+@font-face {
+    font-family: 'Apple II';
+    src: url('/font/PrintChar21.ttf') format('truetype');
+    font-weight: normal;
+    font-style: normal;
+    size-adjust: 80%;
+}
+
 @layer utilities {
+    .font-apple-ii {
+        font-family: 'Apple II', sans-serif;
+    }
+
     .scrollbar-hidden {
         --scrollbar-width: none;
+    }
+
+    .h-screen {
+        height: 100vh;
+        height: 100svh;
+    }
+
+    .w-screen {
+        width: 100vw;
+        width: 100svw;
+    }
+
+    .font-retro {
+        font-family: 'Comic Sans MS', sans-serif;
     }
 
     .scrollbar-hidden::-webkit-scrollbar {
         display: none;
     }
+
+    .border-outset {
+        border-style: outset;
+    }
+
+    .border-groove {
+        border-style: groove;
+    }
+
+    .border-inset {
+        border-style: inset;
+    }
+
 }

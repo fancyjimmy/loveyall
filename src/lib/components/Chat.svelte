@@ -5,6 +5,7 @@
     import Icon from '@iconify/svelte';
     import {fade, fly} from 'svelte/transition';
     import {flip} from "svelte/animate";
+    import {dev} from "$app/environment";
 
     export let room = '';
     export let user = '';
@@ -32,6 +33,8 @@
     function updateUsers(usr) {
         users = usr;
     }
+
+    let ownIndex = -1;
 
     onMount(() => {
         user = sessionStorage.getItem('user');
@@ -114,10 +117,39 @@
 
     let users = [];
 
-    function sendMessage() {
-        const message = textfield.trim();
+
+    function sendMessage(value) {
+        let message = value.trim();
         if (!message) return;
 
+
+        if (dev) { // TODO delete this. only for testing
+            const loremArray = `Lorem ipsum dolor sit amet, consectetur adipisicing elit. Ab consectetur dignissimos dolore ex expedita laboriosam natus, omnis quam quos reprehenderit! A amet assumenda autem commodi dicta dolorum fugiat harum impedit iure, magni minus nulla obcaecati praesentium quasi quod, sit, soluta. Et iusto minus molestias omnis repellat. Cumque eaque perferendis quisquam`.split(" ");
+
+            const lorem = (count: number) => {
+                let a = "";
+                for (let i = 0; i < count; i++) {
+                    a += " " + loremArray[Math.floor(Math.random() * loremArray.length)];
+                }
+                return a;
+            }
+            if (message.startsWith("lorem")) {
+                let rest = message.slice("lorem".length);
+                let count = parseInt(rest);
+                if (isNaN(count)) count = 5;
+                message = lorem(count);
+            } else if (message.startsWith("spam")) {
+                let a = message.slice("spam".length);
+                let b = parseInt(a);
+                message = lorem(Math.floor(Math.random() * 15) + 5);
+                for (let i = 0; i < b; i++) {
+                    setTimeout(() => {
+                        sendMessage(lorem(Math.floor(Math.random() * 15) + 5));
+                    }, 200 * i);
+                }
+            }
+
+        }
         textfield = '';
         io.emit(`chat:${room}:message`, {message});
         messages = [
@@ -127,7 +159,7 @@
                 message,
                 time: Date.now(),
                 self: true,
-                id: (messages[messages.length - 1]?.id ?? -1) + 1
+                id: ownIndex--
             }
         ];
     }
@@ -135,10 +167,11 @@
     let chatElement;
     let autoscroll;
 
+    let scrollThreshold = 20;
     beforeUpdate(() => {
         autoscroll =
             chatElement &&
-            chatElement.offsetHeight + chatElement.scrollTop > chatElement.scrollHeight - 20;
+            chatElement.offsetHeight + chatElement.scrollTop > chatElement.scrollHeight - scrollThreshold;
     });
 
     afterUpdate(() => {
@@ -146,90 +179,94 @@
     });
 </script>
 
-<div class="w-full h-full bg-yellow-900 flex flex-col p-3">
+<div class="bg-slate-900 flex flex-col p-3 overflow-y-auto flex-1 {$$props.class}">
     {#if !loaded}
         <p class="text-white font-bold">Loading...</p>
-    {:else}
-        <div class="text-yellow-200 font-semibold text-xl">
-            <h3>Room: {room}</h3>
-            <h3>Username: {name}</h3>
-            <h3>ID: {io.id}</h3>
-        </div>
-        <div class="flex-1 pt-5 pb-3">
-            <h4 class="text-3xl font-semibold text-yellow-500 mb-5">Chat</h4>
-            <div class="h-full overflow-y-auto">
-                <div
-                        class="overflow-y-visible flex flex-col gap-2 px-6 w-full items-start pb-2"
-                        bind:this={chatElement}
-                >
-                    {#each messages as message (message.id)}
-                        <article
-                                class:own-message={message.self}
-                                class:other-message={!message.self}
-                                class="message"
-                                in:fly={{ key: message.id, y: 20 }}
-                        >
-                            {#if !message.self}
-                                <p
-                                        class="text-sm font-bold mt-[-8px] select-none"
-                                        style="color: {toHslString(colorFromName(message.user))}"
-                                >
-                                    {message.user}
-                                </p>
-                            {/if}
-                            <p class={!message.self ? 'mt-[-8px]' : ''}>{message.message}</p>
-                            <p
-                                    class="absolute bottom-px right-1.5 text-xs font-semibold select-none"
-                                    class:own-message={message.self}
-                                    class:other-message={!message.self}
-                            >
-                                {new Date(message.time).toLocaleTimeString()}
-                            </p>
-                        </article>
-                    {/each}
-                </div>
-                <div class="scrollbar-hidden h-8 gap-2 flex overflow-x-auto">
-                    {#each users.filter((user) => user.name !== name) as user (user.name)}
-                        <div
-                                class="rounded-full px-3 text-white grid items-center justify-center font-bold"
-                                style="background-color: {toHslString(darken(colorFromName(user.name), 20))};"
-                                in:fly={{ key: user.name, x: 20 }}
-                                out:fade={{ key: user.name, duration: 200 }}
-                                animate:flip="{{duration: 300}}"
-                        >
-                            <p>{user.name}</p>
-                        </div>
-                    {/each}
-                </div>
-            </div>
-        </div>
-        <div class="flex gap-3">
-            <input
-                    class="text-yellow-100 focus:ring-2 focus:ring-yellow-500 placeholder-yellow-300 focus:placeholder-yellow-200 flex-1 px-3 rounded bg-yellow-800 duration-200 ring-1 ring-yellow-700 focus:outline-0"
-                    spellcheck="false"
-                    placeholder="Write something..."
-                    type="text"
-                    bind:value={textfield}
-                    on:keydown={(event) => {
-					if (event.key === 'Enter') sendMessage();
-				}}
-            />
-            <button
-                    class="hover:scale-110 duration-200 p-3 text-sky-500 text-2xl grid justify-center rounded"
-                    on:click={sendMessage}
-            >
-                <Icon icon="ic:round-send"/>
-            </button>
-        </div>
-    {/if}
-</div>
 
-<button
-        on:click={() => {
+        <button
+                on:click={() => {
 		location.reload();
 	}}>Reload
-</button
->
+        </button
+        >
+    {:else}
+        <div class="flex flex-col w-full h-full scrollbar-hidden overflow-hidden">
+            <div class="flex justify-between items-center  border-b-slate-700 pb-2">
+                <h3 class="text-3xl text-slate-100 font-bold inline-flex items-center">
+                    <slot name="icon">
+                        <Icon icon="ic:round-meeting-room"></Icon>
+                    </slot>  {room}</h3>
+                <p class="rounded-full bg-sky-500 px-3 text-white grid items-center justify-center font-bold">{name}</p>
+            </div>
+            <div
+                    class="flex flex-1 flex-col gap-2 px-6 w-full items-start pb-2 overflow-y-auto scrollbar-hidden"
+                    bind:this={chatElement}
+            >
+                {#each messages as message (message.id)}
+                    <article
+                            class:own-message={message.self}
+                            class:other-message={!message.self}
+                            class="message"
+                            in:fly={{ key: message.id, y: 20 }}
+                    >
+                        {#if !message.self}
+                            <p
+                                    class="text-sm font-bold mt-[-8px] select-none"
+                                    style="color: {toHslString(colorFromName(message.user))}"
+                            >
+                                {message.user}
+                            </p>
+                        {/if}
+                        <p class="{!message.self ? 'mt-[-8px]' : ''} break-all">{message.message}</p>
+                        <p
+                                class="absolute bottom-px right-1.5 text-xs font-semibold select-none"
+                                class:own-message={message.self}
+                                class:other-message={!message.self}
+                        >
+                            {new Date(message.time).toLocaleTimeString()}
+                        </p>
+                    </article>
+                {/each}
+            </div>
+
+            <div class="scrollbar-hidden h-8 gap-2 flex overflow-x-auto mt-2">
+                {#each users.filter((user) => user.name !== name) as user (user.name)}
+                    <div
+                            class="rounded-full px-3 text-white grid items-center justify-center font-bold"
+                            style="background-color: {toHslString(darken(colorFromName(user.name), 20))};"
+                            in:fly={{ key: user.name, x: 20 }}
+                            out:fade={{ key: user.name, duration: 200 }}
+                            animate:flip="{{duration: 300}}"
+                    >
+                        <p>{user.name}</p>
+                    </div>
+                {/each}
+            </div>
+
+            <div class="flex gap-3 p-2">
+                <input
+                        class="text-slate-100 focus:ring-2 focus:ring-slate-500 placeholder-slate-300 focus:placeholder-slate-200 flex-1 px-3 rounded bg-slate-800 duration-200 ring-1 ring-slate-700 focus:outline-0"
+                        spellcheck="false"
+                        placeholder="Write something..."
+                        type="text"
+                        bind:value={textfield}
+                        on:keydown={(event) => {
+					if (event.key === 'Enter') sendMessage(textfield);
+				}}
+                />
+                <button
+                        class="hover:scale-110 duration-200 p-3 text-sky-500 text-2xl grid justify-center rounded"
+                        on:click={() => {sendMessage(textfield)}}
+                >
+                    <Icon icon="ic:round-send"/>
+                </button>
+            </div>
+
+
+        </div>
+
+    {/if}
+</div>
 
 <style lang="postcss">
     .message {
@@ -262,12 +299,12 @@
         width: 0;
         height: 0;
 
-        border-top: solid 0.9em theme('colors.yellow.200');
+        border-top: solid 0.9em theme('colors.slate.200');
         border-left: solid 0.9em transparent;
     }
 
     article.other-message {
-        @apply bg-yellow-200;
+        @apply bg-slate-200;
         border-top-left-radius: 0;
     }
 
@@ -276,6 +313,6 @@
     }
 
     p.other-message {
-        @apply text-yellow-700;
+        @apply text-slate-700;
     }
 </style>

@@ -1,11 +1,14 @@
 <script lang="ts">
     import Chat from "$lib/components/Chat.svelte";
+    import Icon from "@iconify/svelte";
 
     export let data;
 </script>
 
-<a href="/chat">back</a>
-
-<Chat room={data.room}>
-
-</Chat>
+<div class="w-screen h-screen flex scrollbar-hidden overflow-hidden">
+    <Chat room={data.room} class="scrollbar-hidden">
+        <a slot="icon" href="/chat" class="pr-3">
+            <Icon icon="material-symbols:arrow-back-ios-new"/>
+        </a>
+    </Chat>
+</div>

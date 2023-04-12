@@ -21,9 +21,16 @@ type ChatRoomHandler = {
     leave: null,
 }
 
+const unreservedChars = [
+    '-', '_', '.', '~',
+    'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z',
+    'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z',
+    '0', '1', '2', '3', '4', '5', '6', '7', '8', '9'
+];
+
+
 export class ServerChatRoomHandler extends ServerHandler<ChatRoomHandler> {
     rooms = new Map<string, ServerChatHandler>();
-
 
     listenToChatRoom(io: Server, room: ServerChatHandler) {
         const listener = (socket: Socket) => {
@@ -47,6 +54,15 @@ export class ServerChatRoomHandler extends ServerHandler<ChatRoomHandler> {
         });
     }
 
+    isValidName(name: string) {
+
+        return name.split("").every(char => unreservedChars.includes(char));
+    }
+
+    removeIllegalChars(name: string) {
+        return name.split("").map(char => char === " " ? "-" : char).filter(char => unreservedChars.includes(char)).join("");
+    }
+
     broadcastRoomChange(io: Server) {
         io.to(this.nameSpace).emit("rooms", Array.from(this.rooms.keys()));
     }
@@ -54,7 +70,18 @@ export class ServerChatRoomHandler extends ServerHandler<ChatRoomHandler> {
     constructor() {
         super("chatRoom", {
             create: ({name}, socket, io) => {
+                if (name === "general") {
+                    logger.log("chatroom", `room ${name} is not allowed`, {extra: {socketId: socket.id}})
+                    return;
+                }
+                if (!this.isValidName(name)) {
+                    logger.log("chatroom", `room ${name} is not allowed`, {extra: {socketId: socket.id}})
+                    name = this.removeIllegalChars(name);
+                    logger.log("chatroom", `room ${name} is used instead`, {extra: {socketId: socket.id}})
+                }
+
                 if (this.rooms.has(name)) {
+                    socket.emit("roomExists", {name: name})
                     logger.log("chatroom", `room ${name} already exists`, {extra: {socketId: socket.id}})
                     return;
                 } else {
@@ -62,6 +89,7 @@ export class ServerChatRoomHandler extends ServerHandler<ChatRoomHandler> {
                     const room = new ServerChatHandler(name, true);
                     this.rooms.set(room.roomName, room);
                     this.broadcastRoomChange(io);
+                    socket.emit("roomCreated", {name: room.roomName});
                     this.listenToChatRoom(io, room);
                 }
             },

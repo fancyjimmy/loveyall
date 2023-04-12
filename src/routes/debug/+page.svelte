@@ -4,7 +4,7 @@
     import {afterUpdate, beforeUpdate, onMount} from 'svelte';
     import {dev} from '$app/environment';
 
-    let url = '/general';
+    let url = '/chat';
     let numberOfFrames = '3';
 
     let realUrl = '';
@@ -30,6 +30,9 @@
             })
         });
     }
+
+
+    let a = {};
 
     function go() {
         didGo = false;
@@ -75,6 +78,8 @@
     afterUpdate(() => {
         if (autoscroll) output.scrollTo(0, output.scrollHeight);
     });
+
+    //TODO Check why Chat.svelte doesn't work now that i have put it with a +layout
     let runDangerously = false;
 </script>
 
@@ -101,8 +106,9 @@
         <div class="w-full flex flex-1">
             {#if !didGo}
                 {#each Array.from({length: realNumberOfFrames}) as _, i}
-                    <div class="h-full flex-1">
-                        <iframe src={realUrl} class="h-full w-full" style="margin: 0;"/>
+                    <div class="flex-1 flex flex-col">
+                        <iframe src={realUrl} bind:this={a[i]} class="h-full w-full flex-1" style="margin: 0;"/>
+                        <p>{a[i]?.contentWindow?.location?.href ?? "not Loaded"}</p>
                     </div>
                 {/each}
             {/if}
