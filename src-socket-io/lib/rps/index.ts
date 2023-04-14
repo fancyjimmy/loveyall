@@ -13,6 +13,7 @@ type RockPaperScissorEvents = {
     play: {
         key: string;
         choice: 'rock' | 'paper' | 'scissor';
+        roomId: string;
     }
 };
 
@@ -39,18 +40,30 @@ the person then calls the rps:play endpoint with the key and the choice
 
  */
 
+/*
+client events
+
+
+ */
+
 const possibleChoices = ['rock', 'paper', 'scissor'];
 
 type State = 'nobodyJoinedTimeout' | 'timeout' | 'played';
+
+type RockPaperScissorPlayer = {
+    socket: Socket;
+    name: string;
+    identifier: string;
+}
 
 class RockPaperScissorGame {
 
     private cbNobodyJoinedTimeout?: () => void;
     private cbTimeOut?: () => void;
-    private cbPlayed?: (winner?: Socket) => void;
+    private cbPlayed?: (winner?: RockPaperScissorPlayer) => void;
     private cbEnded?: () => void;
 
-    constructor(private roomId: string, private password: string, private nobodyJoinedTimeout: number = 1000 * 60 * 5, private timeOut: number = 1000 * 60 * 15) {
+    constructor(public readonly roomId: string, public readonly password: string, private nobodyJoinedTimeout: number = 1000 * 60 * 5, private timeOut: number = 1000 * 60 * 15) {
     }
 
 
@@ -67,7 +80,7 @@ class RockPaperScissorGame {
         this.cbNobodyJoinedTimeout = cb;
     }
 
-    whenPlayed(cb: (winner?: Socket) => void) {
+    whenPlayed(cb: (winner?: RockPaperScissorPlayer) => void) {
         this.cbPlayed = cb;
     }
 
@@ -109,7 +122,7 @@ class RockPaperScissorGame {
     }
 
 
-    removeTimer() {
+    private removeTimer() {
         if (this.timers["nobodyJoinedTimeout"]) {
             clearTimeout(this.timers["nobodyJoinedTimeout"]);
             this.timers["nobodyJoinedTimeout"] = undefined;
@@ -122,21 +135,54 @@ class RockPaperScissorGame {
 
     }
 
+    end() {
+        this.removeTimer();
+        this.finished = true;
+        this.cbEnded?.();
+    }
 
-    private playerOne?: Socket;
-    private playerTwo?: Socket;
+
+    private playerOne?: RockPaperScissorPlayer;
+    private playerTwo?: RockPaperScissorPlayer;
 
     private playerOneChoice?: 'rock' | 'paper' | 'scissor';
     private playerTwoChoice?: 'rock' | 'paper' | 'scissor';
 
     private playedOut = false;
 
-    setPlayerOne(socket: Socket) {
-        this.playerOne = socket;
+    setPlayerOne(socket: Socket, name: string): string {
+        const identifier = `${this.roomId}-${socket.id}-${name}`;
+        this.playerOne = {socket, name, identifier};
+        return identifier;
     }
 
-    setPlayerTwo(socket: Socket) {
-        this.playerTwo = socket;
+    joinPlayer(socket: Socket, name: string, password: string): string | null {
+        if (password !== this.password) {
+            this.emitError("wrong password");
+            return null;
+        }
+
+        if (socket.id === this.playerOne?.socket.id || socket.id === this.playerTwo?.socket.id) {
+            this.emitError("already joined");
+            return null;
+        }
+
+        if (this.playerOne) {
+            return this.setPlayerTwo(socket, name);
+        } else {
+            if (this.playerTwo) {
+                this.emitError("room full");
+                return null;
+            }
+            return this.setPlayerOne(socket, name);
+        }
+
+    }
+
+    setPlayerTwo(socket: Socket, name: string) {
+        const identifier = `${this.roomId}-${socket.id}-${name}`;
+        this.playerTwo = {socket, name, identifier};
+        return identifier;
     }
 
     setPlayerOneChoice(choice: 'rock' | 'paper' | 'scissor') {
@@ -150,7 +196,7 @@ class RockPaperScissorGame {
         }
         this.playerOneChoice = choice;
         if (this.playerTwoChoice) {
-            this.emitResult();
+            this.playOut();
         }
     }
 
@@ -158,6 +204,8 @@ class RockPaperScissorGame {
         if (this.cbPlayed) {
             this.cbPlayed(this.winner);
         }
+        this.emitResult();
+        this.end();
     }
 
     /**
@@ -165,7 +213,7 @@ class RockPaperScissorGame {
      * returns 1 if player one won
      * returns 2 if player two won
      */
-    get winner(): Socket | undefined {
+    get winner(): RockPaperScissorPlayer | undefined {
         let choice = 0;
         if (this.playerOneChoice === this.playerTwoChoice) {
             choice = 0;
@@ -193,6 +241,16 @@ class RockPaperScissorGame {
 
     }
 
+    play(key: string, choice: 'rock' | 'paper' | 'scissor') {
+        if (this.playerOne?.identifier === key) {
+            this.setPlayerOneChoice(choice);
+        } else if (this.playerTwo?.identifier === key) {
+            this.setPlayerTwoChoice(choice);
+        } else {
+            this.emitError("unknown key");
+        }
+    }
+
     setPlayerTwoChoice(choice: 'rock' | 'paper' | 'scissor') {
         if (!possibleChoices.includes(choice)) {
             this.emitError("unknown choice");
@@ -211,11 +269,13 @@ class RockPaperScissorGame {
 
     emitResult() {
         this.playedOut = true;
+        if (this.playerOne) this.playerOne.socket.emit("result", this.winner?.name);
+        if (this.playerTwo) this.playerTwo.socket.emit("result", this.winner?.name);
     }
 
     emitError(error: string) {
-        if (this.playerOne) this.playerOne.emit("error", error);
-        if (this.playerTwo) this.playerTwo.emit("error", error);
+        if (this.playerOne) this.playerOne.socket.emit("error", error);
+        if (this.playerTwo) this.playerTwo.socket.emit("error", error);
     }
 }
 
@@ -225,28 +285,79 @@ class RockPaperScissorHandler extends ServerHandler<RockPaperScissorEvents> {
         return (Math.random() * 100000).toString(16);
     }
 
+    private games: RockPaperScissorGame[] = [];
+
+    removeGame(game: RockPaperScissorGame) {
+        const index = this.games.indexOf(game);
+        if (index > -1) {
+            this.games.splice(index, 1);
+        }
+    }
+
     constructor() {
         super("rps", {
             "create": (data, socket) => {
                 const password = data.password;
                 const game = new RockPaperScissorGame(this.generateRoomName(), password);
 
-                game.whenPlayed((winner) => {
+                this.games.push(game);
 
+                game.whenNobodyJoinedTimeout(() => {
+                    game.end();
                 });
-            },
-            "join": (data, socket) => {
 
-            },
-            "play": (data, socket) => {
+                game.whenEnded(() => {
+                    this.removeGame(game);
+                });
 
+                game.whenTimeout(() => {
+                    game.end();
+                });
+
+                game.whenPlayed((winner) => {
+                    console.log(winner);
+                });
+
+                game.startTimer();
+                this.emitRoomCreated(game.roomId, socket);
+            },
+            "join": ({password, roomId, name}, socket) => {
+                const game = this.games.find(game => game.roomId === roomId);
+                if (!game) {
+                    this.emitError(socket, "room not found");
+                    return;
+                }
+                const identifier = game.joinPlayer(socket, name, password);
+                if (identifier) {
+                    this.emitRoomJoined(roomId, socket);
+                } else {
+                    this.emitError(socket, "join failed");
+                }
+            },
+            "play": ({choice, key, roomId}, socket) => {
+                const game = this.games.find(game => game.roomId === roomId);
+                if (!game) {
+                    this.emitError(socket, "room not found");
+                    return;
+                }
+
+                game.play(key, choice);
             }
 
         });
     }
 
-    emitRoomCreated(roomName: string, socket: Socket) {
-        socket.emit("roomCreated", roomName);
+    emitError(socket: Socket, error: string) {
+        socket.emit("error", error);
     }
+
+    emitRoomCreated(roomId: string, socket: Socket) {
+        socket.emit("created", roomId);
+    }
+
+    emitRoomJoined(roomName: string, socket: Socket) {
+        socket.emit("joined", roomName);
+    }
+
 
 }

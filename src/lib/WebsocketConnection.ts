@@ -1,7 +1,17 @@
-import ioClient, {Socket} from 'socket.io-client';
+import ioClient from 'socket.io-client';
 
-const ENDPOINT = 'http://10.117.237.84:5173/';
+const ENDPOINT = 'http://localhost:5173/';
 
-const socket = ioClient(ENDPOINT);
+let socket;
 
-export const io: Socket = socket;
+try {
+    socket = ioClient(ENDPOINT);
+} catch (error) {
+    alert('Error connecting to server. Please try again later.')
+    console.error(error);
+}
+
+export const io = socket;
+
+
+// https://contacts-d6169-default-rtdb.europe-west1.firebasedatabase.app/name.json

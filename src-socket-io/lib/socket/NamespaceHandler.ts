@@ -1,21 +1,20 @@
-import type ServerSocketHandler from "./ServerSocketHandler";
-import type {Server, Socket} from "socket.io";
-import type {TypedServerHandler} from "./types";
-import type {NamespaceHandler} from "./NamespaceHandler";
+import type {Namespace, Socket} from "socket.io";
+import type {TypedNamespaceHandler} from "./types";
+import type NamespaceSocketHandler from "./NamespaceSocketHandler";
 
 
-type ServerListener<T> = {
+type NamespaceListener<T> = {
     [key: string]: {
-        [socketId: string]: (data: T, socket: Socket, io: Server) => void
+        [socketId: string]: (data: T, socket: Socket, io: Namespace) => void
     }
 }
 
 
-export class ServerHandler<T> implements ServerSocketHandler {
+export default class NamespaceHandler<T> implements NamespaceSocketHandler {
 
-    private listeners: ServerListener<any> = {};
+    private listeners: NamespaceListener<any> = {};
 
-    registerSocket(io: Server, socket: Socket) {
+    registerSocket(io: Namespace, socket: Socket) {
         const specificEvents = ["disconnect", "disconnecting"];
         for (let key in this.handler) {
             let realKey = `${this.nameSpace}:${key}`;
@@ -37,11 +36,11 @@ export class ServerHandler<T> implements ServerSocketHandler {
         }
     }
 
-    registerForEverySocket(io: Server) {
-        io.sockets.sockets.forEach(socket => this.registerSocket(io, socket));
+    registerForEverySocket(io: Namespace) {
+        io.sockets.forEach(socket => this.registerSocket(io, socket));
     }
 
-    unregister(socket: Socket) {
+    unregister(socket: Socket, io: Namespace) {
         for (let key in this.listeners) {
             try {
                 socket.off(key, this.listeners[key][socket.id]);
@@ -49,18 +48,16 @@ export class ServerHandler<T> implements ServerSocketHandler {
                 console.error(e);
             }
         }
+
+        io.disconnectSockets(true);
+
     }
 
-    registerNamespaceHandler<T>(io: Server, namespace: string, namespaceHandler: NamespaceHandler<T>) {
-        const namespaceConnection = io.of(namespace);
-        namespaceConnection.on("connection", socket => namespaceHandler.registerSocket(namespaceConnection, socket));
-    }
 
-
-    protected handler: TypedServerHandler<T>;
+    protected handler: TypedNamespaceHandler<T>;
     protected nameSpace: string;
 
-    constructor(nameSpace: string, handler: TypedServerHandler<T>) {
+    constructor(nameSpace: string, handler: TypedNamespaceHandler<T>) {
         this.handler = handler;
         this.nameSpace = nameSpace;
     }
