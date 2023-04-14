@@ -40,7 +40,15 @@ export default class NamespaceHandler<T> implements NamespaceSocketHandler {
         io.sockets.forEach(socket => this.registerSocket(io, socket));
     }
 
-    unregister(socket: Socket, io: Namespace) {
+
+    /**
+     * Unregister all listeners for a socket
+     *
+     * @param socket
+     * @param io
+     * @param close if true, the socket will be disconnected and can't be used anymore
+     */
+    unregister(socket: Socket, io: Namespace, close: boolean) {
         for (let key in this.listeners) {
             try {
                 socket.off(key, this.listeners[key][socket.id]);
@@ -49,7 +57,7 @@ export default class NamespaceHandler<T> implements NamespaceSocketHandler {
             }
         }
 
-        io.disconnectSockets(true);
+        io.disconnectSockets(close);
 
     }
 
