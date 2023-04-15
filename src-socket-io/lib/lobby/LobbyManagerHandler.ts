@@ -87,7 +87,8 @@ export class LobbyManagerHandler extends ServerHandler<LobbyManagingEvents> {
                     return;
                 }
 
-                const lobby = this.instantiateLobby(io, settings, {minutes: 5});
+                let chatRoomId: string | undefined = undefined;
+                const lobby = this.instantiateLobby(io, {...settings, chatRoomId}, {minutes: 5});
 
                 cb({
                     data: lobby.lobbyId, success: true, message: "Lobby created"

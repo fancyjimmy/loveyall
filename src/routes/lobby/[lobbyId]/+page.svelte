@@ -10,6 +10,7 @@
         Response
     } from '../../../../src-socket-io/lib/lobby/types';
     import {getLobbyConnection} from '../../../lib/lobby/LobbyConnection';
+    import Chat from "$lib/components/Chat.svelte";
 
     export let data;
 
@@ -174,32 +175,44 @@
 
 </script>
 
-{#if loadingState === 'loading'}
-    <p>Loading</p>
-{:else if loadingState === 'error'}
-    <p>Lobby not Found</p>
-    <p>{JSON.stringify(error)}</p>
-    <p><a href="/lobby">Create</a></p>
-{:else}
-    <div>
-        <p>{username}</p>
-        <p>{role}</p>
-        <button class="bg-yellow-200" on:click={copyLink}>
-            <p>{data.lobbyId}</p>
+<div class="flex w-screen h-screen">
+    <div class="flex-1">
+        {#if loadingState === 'loading'}
+            <p>Loading</p>
+        {:else if loadingState === 'error'}
+            <p>Lobby not Found</p>
+            <p>{JSON.stringify(error)}</p>
+            <p><a href="/lobby">Create</a></p>
+        {:else}
+            <div>
+                <p>{username}</p>
+                <p>{role}</p>
+                <button class="bg-yellow-200" on:click={copyLink}>
+                    <p>{data.lobbyId}</p>
 
-        </button>
-        <p>{JSON.stringify(lobbySettings)}</p>
-        <p>Players</p>
-        <div class="flex">
+                </button>
+                <p>{JSON.stringify(lobbySettings)}</p>
+                <p>Players</p>
+                <div class="flex">
 
-            {#each players.filter(player => player.username !== username) as player}
-                <div class="bg-red-200">
-                    <p>{player.username}</p>
-                    <p>{player.role}</p>
-                    <p>{player.joinedTime}</p>
+                    {#each players.filter(player => player.username !== username) as player}
+                        <div class="bg-red-200">
+                            <p>{player.username}</p>
+                            <p>{player.role}</p>
+                            <p>{player.joinedTime}</p>
+                        </div>
+                    {/each}
                 </div>
-            {/each}
-        </div>
+            </div>
+
+        {/if}
     </div>
 
-{/if}
+    <div class="flex-1">
+        {#if loadingState === "success"}
+            <Chat room="general" user={username} class="h-full w-full"></Chat>
+        {/if}
+    </div>
+
+</div>
+

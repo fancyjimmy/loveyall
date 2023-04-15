@@ -37,12 +37,15 @@
     let ownIndex = -1;
 
     onMount(() => {
-        user = sessionStorage.getItem('user');
         if (!user) {
-            user = prompt('What is your name?');
-            sessionStorage.setItem('user', user);
-            name = user;
+            user = sessionStorage.getItem('user');
+            if (!user) {
+                user = prompt('What is your name?');
+                sessionStorage.setItem('user', user);
+                name = user;
+            }
         }
+
 
         setTimeout(reloadIfNotLoaded, 4000);
 
