@@ -6,6 +6,6 @@ export const csr = true;
 
 export const load: PageLoad = async ({params}) => {
     return {
-        roomId: params.roomId
+        lobbyId: params.lobbyId
     }
 };

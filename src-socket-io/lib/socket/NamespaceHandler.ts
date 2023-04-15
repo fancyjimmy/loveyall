@@ -1,4 +1,4 @@
-import type {Namespace, Socket} from "socket.io";
+import type {Namespace, Server, Socket} from "socket.io";
 import type {TypedNamespaceHandler} from "./types";
 import type NamespaceSocketHandler from "./NamespaceSocketHandler";
 
@@ -17,16 +17,29 @@ export default class NamespaceHandler<T> implements NamespaceSocketHandler {
     registerSocket(io: Namespace, socket: Socket) {
         const specificEvents = ["disconnect", "disconnecting"];
         for (let key in this.handler) {
-            let realKey = `${this.nameSpace}:${key}`;
-            if (specificEvents.includes(key)) {
-                realKey = `${key}`;
-            }
+
+            let realKey = `${key}`;
+
             // Doesn't work with Acknowledgements or multiple params.
             // to do that data needs to be replaced with ...args, but then it's not type safe anymore
-            const listener = (data: any) => {
-                return this.handler[key](data, socket, io);
+            const listener = (...data: any[]) => {
+                try {
+                    if (data.length <= 1)
+                        return this.handler[key](data[0] ?? null, socket, io);
+                    return this.handler[key](data as any, socket, io);
+                } catch (e) {
+                    console.error(e);
+                }
             }
 
+            if (key === "connect") {
+                try {
+                    listener(null, socket, io);
+                } catch (e) {
+                    console.error(e);
+                }
+                continue;
+            }
             socket.on(realKey, listener);
             if (!this.listeners[realKey]) {
                 this.listeners[realKey] = {};
@@ -38,6 +51,11 @@ export default class NamespaceHandler<T> implements NamespaceSocketHandler {
 
     registerForEverySocket(io: Namespace) {
         io.sockets.forEach(socket => this.registerSocket(io, socket));
+    }
+
+    remove(io: Server) {
+        io._nsps.delete(this.namespaceName);
+        io.of(this.namespaceName).local.disconnectSockets(true);
     }
 
 
@@ -56,17 +74,21 @@ export default class NamespaceHandler<T> implements NamespaceSocketHandler {
                 console.error(e);
             }
         }
-
         io.disconnectSockets(close);
-
     }
 
 
     protected handler: TypedNamespaceHandler<T>;
-    protected nameSpace: string;
+    protected namespaceName: string;
+    protected io: Server;
 
-    constructor(nameSpace: string, handler: TypedNamespaceHandler<T>) {
+    get namespace(): Namespace {
+        return this.io.of(this.namespaceName);
+    }
+
+    constructor(namespaceName: string, io: Server, handler: TypedNamespaceHandler<T>) {
         this.handler = handler;
-        this.nameSpace = nameSpace;
+        this.namespaceName = namespaceName;
+        this.io = io;
     }
 }

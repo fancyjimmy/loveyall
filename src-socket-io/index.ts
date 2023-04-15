@@ -4,12 +4,14 @@ import type {Server as HttpServer} from 'http';
 
 import {ServerChatHandler, ServerChatRoomHandler} from "./lib/chat";
 import {DebugHandler} from "./lib/debug";
+import {LobbyManagerHandler} from "./lib/lobby/LobbyManagerHandler";
 
 
 const serverHandlers = [
     new ServerChatHandler("general", false),
     new ServerChatRoomHandler(),
     new DebugHandler(),
+    new LobbyManagerHandler(),
 ]
 
 

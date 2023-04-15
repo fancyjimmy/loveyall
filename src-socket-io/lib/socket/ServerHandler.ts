@@ -1,7 +1,7 @@
 import type ServerSocketHandler from "./ServerSocketHandler";
 import type {Server, Socket} from "socket.io";
 import type {TypedServerHandler} from "./types";
-import type {NamespaceHandler} from "./NamespaceHandler";
+import type NamespaceHandler from "./NamespaceHandler";
 
 
 type ServerListener<T> = {
@@ -16,7 +16,7 @@ export class ServerHandler<T> implements ServerSocketHandler {
     private listeners: ServerListener<any> = {};
 
     registerSocket(io: Server, socket: Socket) {
-        const specificEvents = ["disconnect", "disconnecting"];
+        const specificEvents = ["disconnect", "disconnecting", "connect"];
         for (let key in this.handler) {
             let realKey = `${this.nameSpace}:${key}`;
             if (specificEvents.includes(key)) {
@@ -24,10 +24,25 @@ export class ServerHandler<T> implements ServerSocketHandler {
             }
             // Doesn't work with Acknowledgements or multiple params.
             // to do that data needs to be replaced with ...args, but then it's not type safe anymore
-            const listener = (data: any) => {
-                return this.handler[key](data, socket, io);
+            const listener = (...data: any[]) => {
+                try {
+                    if (data.length <= 1) {
+                        return this.handler[key](data[0] ?? null, socket, io);
+                    }
+                    return this.handler[key](data as any, socket, io);
+                } catch (e) {
+                    console.error(e);
+                }
             }
 
+            if (key === "connect") {
+                try {
+                    listener(null, socket, io);
+                } catch (e) {
+                    console.error(e);
+                }
+                continue;
+            }
             socket.on(realKey, listener);
             if (!this.listeners[realKey]) {
                 this.listeners[realKey] = {};

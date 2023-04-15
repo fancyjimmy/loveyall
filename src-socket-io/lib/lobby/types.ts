@@ -1,49 +1,122 @@
+import type {Socket} from "socket.io";
+
 export type LobbySettings = {
     maxPlayers: number,
-    withScore: string,
+    chatRoomId?: string,
+    isPrivate: boolean,
+    password: string | null
+};
+
+
+export type Response<T> = {
+    message: string,
+    success: boolean,
+    data: T | null
+};
+
+export type CreatedClientReturn = Response<{
+    lobbyId: string,
+    username: string,
+    sessionKey: string
+}>;
+
+export type PlayerAuthenticationResponse = {
+    username: string,
+    sessionKey: string,
 };
 
 export type LobbyManagingEvents = {
-    create: {
-        password: string,
+    create: [{
         settings: LobbySettings
-        username: string
-    },
-    join: {
+    }, (response: Response<string>) => void],
+    join: [{
         lobbyId: string,
         username: string,
         password: string
-    },
-    leave: null,
-    disconnect: null,
+    }, (response: Response<PlayerAuthenticationResponse>) => void],
+    get: [{
+        lobbyId: string,
+    }, (response: Response<Partial<LobbySettings>>) => void],
 };
-export type LobbyRole = "admin" | "player";
 
-export type Player = {
-    id: string,
+export enum LobbyRole {
+    PLAYER = "player",
+    HOST = "host",
+}
+
+export type PlayerInfo = {
     username: string,
     role: LobbyRole,
     joinedTime: Date,
 }
 
+export type Player = PlayerInfo & {
+    socket: Socket,
+    sessionKey: string,
+    reconnecting?: boolean,
+}
+
 export type LobbyInfo = {
     lobbyId: string,
-    chatRoomId?: string,
     settings: LobbySettings
 }
 
 export type LobbyClientEvents = {
-    created: {
-        lobbyId: string,
-    },
     joined: {
         lobbyInfo: LobbyInfo,
         role: LobbyRole,
-        username: string,
-        sessionKey: string, // used to identify the user in the lobby and if you have it you can reconnect to the lobby
-        players: Player[],
+        players: PlayerInfo[],
     },
-    userChanged: {
-        players: Player[],
+    playerChanged: {
+        players: PlayerInfo[],
+    },
+    error: {}
+}
+
+export type LobbyError = {
+    code: number,
+    message: string,
+};
+
+export type LobbyServerEvents = {
+    lobbyNotFound: {
+        code: 1,
+        message: "Lobby not found",
+    },
+    lobbyFull: {
+        code: 2,
+        message: "Lobby is full",
+    },
+    wrongPassword: {
+        code: 3,
+        message: "Wrong password",
+    },
+    lobbyAlreadyExists: {
+        code: 4,
+        message: "Lobby already exists",
+    },
+}
+
+
+export type LobbyLifeCycleEvents = {
+    joined: {
+        player: Player,
+    },
+    hostChanged: {
+        player: Player,
+    },
+    playerChanged: {
+        player: Player,
+        joined: boolean,
+        allPlayers: Player[],
+    }
+    playerRemoved: {
+        player: Player
+    },
+    left: {
+        player: Player,
+    },
+    disconnected: {
+        socket: Socket,
     }
 }
