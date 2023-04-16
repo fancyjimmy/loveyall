@@ -1,7 +1,7 @@
-import {ServerHandler} from "../socket/ServerHandler";
 import {logger} from "../Logging";
-import type {Socket} from "socket.io";
+import type {Server, Socket} from "socket.io";
 import type {ChatHandler, ChatUserInfo} from "./types";
+import NamespaceHandler from "../socket/NamespaceHandler";
 
 
 const adjectives = [
@@ -30,14 +30,14 @@ const nouns = [
 ];
 
 
-export default class ServerChatHandler extends ServerHandler<ChatHandler> {
+export default class ServerChatHandler extends NamespaceHandler<ChatHandler> {
     // socket.id -> name
     private userSockets = new Map<string, string>();
 
     private counter = 0;
 
-    constructor(public readonly roomName: string = "general", private temporary: boolean = false, private timeOutTime: number = 5 * 1000) {
-        super(`chat:${roomName}`, {
+    constructor(io: Server, public readonly roomName: string = "general", private temporary: boolean = false, private timeOutTime: number = 5 * 1000) {
+        super(`chat/${roomName}`, io, {
             join: ({name}, socket, io) => {
                 logger.log("chat", `${socket.id} tried to join room ${this.roomName}`, {severity: -1});
                 // if (roomName !== this.roomName) {
@@ -68,6 +68,8 @@ export default class ServerChatHandler extends ServerHandler<ChatHandler> {
             },
             disconnect: (data, socket, io) => {
                 this.leaveRoom(socket);
+            },
+            connect: (data, socket, io) => {
             }
         });
 
@@ -76,7 +78,7 @@ export default class ServerChatHandler extends ServerHandler<ChatHandler> {
             setTimeout(() => {
                 if (this.userSockets.size === 0) {
                     logger.log("chatroom", `room ${this.roomName} was closed because it was temporary and nobody even joined`);
-                    this.closeCallback();
+                    this.closeRoom();
                 }
             }, this.timeOutTime);
         }
@@ -109,7 +111,7 @@ export default class ServerChatHandler extends ServerHandler<ChatHandler> {
     }
 
     joinRoom(socket: Socket) {
-        socket.join(this.nameSpace);
+        socket.join(this.namespaceName);
     }
 
     leaveRoom(socket: Socket) {
@@ -117,16 +119,21 @@ export default class ServerChatHandler extends ServerHandler<ChatHandler> {
         if (user) {
             logger.log("chat", `${user} left room ${this.roomName}`);
         }
-        socket.leave(this.nameSpace);
+        socket.leave(this.namespaceName);
         this.userSockets.delete(socket.id);
         this.emitUsers(socket);
         if (this.userChangeCallback) {
             this.userChangeCallback(this.userCount);
         }
         if (this.userSockets.size === 0 && this.temporary) {
-            this.closeCallback();
+            this.closeRoom();
             logger.log("chatroom", `room ${this.roomName} was closed because it was temporary and everybody left`, {extra: {socketId: socket.id}});
         }
+    }
+
+    closeRoom() {
+        this.closeCallback();
+        this.unregister(true);
     }
 
     get userCount() {
@@ -162,7 +169,7 @@ export default class ServerChatHandler extends ServerHandler<ChatHandler> {
     }
 
     emitUsers(socket: Socket) {
-        socket.to(this.nameSpace).emit("users", this.getClientUsers());
+        socket.to(this.namespaceName).emit("users", this.getClientUsers());
     }
 
     getUser(socket: Socket) {
@@ -174,7 +181,7 @@ export default class ServerChatHandler extends ServerHandler<ChatHandler> {
         if (!user) {
             throw new Error("User not found, but it shouldn't happen, because it is checked before");
         }
-        socket.to(this.nameSpace).emit("message", {message, user, time: Date.now(), id: this.counter++});
+        this.namespace.except(socket.id).emit("message", {message, user, time: Date.now(), id: this.counter++});
         if (this.messageCallback) {
             this.messageCallback(message, socket, {id: socket.id, name: user});
         }

@@ -3,6 +3,7 @@ import type {LobbyManagingEvents, LobbySettings} from "./types";
 import type {Namespace, Server, Socket} from "socket.io";
 import {LobbyHandler} from "./LobbyHandler";
 import type {TimerOptions} from "./TimeoutPolicy";
+import {ServerChatHandler} from "../chat";
 
 
 type StringTyped = { [key: string]: any };
@@ -87,9 +88,16 @@ export class LobbyManagerHandler extends ServerHandler<LobbyManagingEvents> {
                     return;
                 }
 
-                let chatRoomId: string | undefined = undefined;
+                let chatRoomId: string = crypto.randomUUID();
+                const serverChat = new ServerChatHandler(io, chatRoomId, true);
+                serverChat.registerForEverySocket();
+
+
                 const lobby = this.instantiateLobby(io, {...settings, chatRoomId}, {minutes: 5});
 
+                lobby.onStop(() => {
+                    serverChat.closeRoom();
+                })
                 cb({
                     data: lobby.lobbyId, success: true, message: "Lobby created"
                 });

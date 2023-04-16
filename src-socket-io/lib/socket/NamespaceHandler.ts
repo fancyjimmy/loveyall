@@ -49,8 +49,8 @@ export default class NamespaceHandler<T> implements NamespaceSocketHandler {
         }
     }
 
-    registerForEverySocket(io: Namespace) {
-        io.sockets.forEach(socket => this.registerSocket(io, socket));
+    registerForEverySocket() {
+        this.namespace.on('connection', (socket) => this.registerSocket(this.namespace, socket));
     }
 
     remove(io: Server) {
@@ -62,24 +62,15 @@ export default class NamespaceHandler<T> implements NamespaceSocketHandler {
     /**
      * Unregister all listeners for a socket
      *
-     * @param socket
-     * @param io
      * @param close if true, the socket will be disconnected and can't be used anymore
      */
-    unregister(socket: Socket, io: Namespace, close: boolean) {
-        for (let key in this.listeners) {
-            try {
-                socket.off(key, this.listeners[key][socket.id]);
-            } catch (e) {
-                console.error(e);
-            }
-        }
-        io.disconnectSockets(close);
+    unregister(close: boolean) {
+        this.namespace.disconnectSockets(close);
     }
 
 
     protected handler: TypedNamespaceHandler<T>;
-    protected namespaceName: string;
+    public readonly namespaceName: string;
     protected io: Server;
 
     get namespace(): Namespace {

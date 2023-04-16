@@ -16,22 +16,21 @@ export default class ServerChatRoomHandler extends ServerHandler<ChatRoomHandler
 
     listenToChatRoom(io: Server, room: ServerChatHandler) {
         const listener = (socket: Socket) => {
-            room.registerSocket(io, socket);
+            room.registerSocket(io.of(room.namespaceName), socket);
         };
 
         // new Sockets are automatically able to join the new room
         io.on("connection", listener);
 
         // old sockets are able to join the new room
-        room.registerForEverySocket(io);
+        room.registerForEverySocket();
 
         room.whenClosing(() => {
             logger.log("chatroom", `room ${room.roomName} was closed`)
             this.rooms.delete(room.roomName);
             // new Sockets are not able to join the new room
-            io.off("connection", listener);
+            room.unregister(true);
             // old sockets are not able to join the new room
-            io.sockets.sockets.forEach(socket => room.unregister(socket));
             this.broadcastRoomChange(io);
         });
     }
@@ -89,7 +88,7 @@ export default class ServerChatRoomHandler extends ServerHandler<ChatRoomHandler
                     return;
                 } else {
                     logger.log("chatroom", `room ${name} created`, {extra: {socketId: socket.id}})
-                    const room = new ServerChatHandler(name, true);
+                    const room = new ServerChatHandler(io, name, true);
                     this.rooms.set(room.roomName, room);
                     room.whenUserChanges((count) => {
                         this.broadcastRoomChange(io);

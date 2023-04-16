@@ -1,11 +1,11 @@
 <script lang="ts">
     import {afterUpdate, beforeUpdate, onMount} from 'svelte';
-    import {io} from '$lib/WebsocketConnection';
 
     import Icon from '@iconify/svelte';
     import {fade, fly} from 'svelte/transition';
     import {flip} from "svelte/animate";
     import {dev} from "$app/environment";
+    import ioClient, {Socket} from "socket.io-client";
 
     export let room = '';
     export let user = '';
@@ -36,6 +36,7 @@
 
     let ownIndex = -1;
 
+    let io: Socket;
     onMount(() => {
         if (!user) {
             user = sessionStorage.getItem('user');
@@ -46,17 +47,20 @@
             }
         }
 
+        io = ioClient(`/chat/${room}`);
 
-        setTimeout(reloadIfNotLoaded, 4000);
+
+        //setTimeout(reloadIfNotLoaded, 4000);
 
 
         io.on('message', updateMessages);
         io.on('name', updateName);
         io.on('users', updateUsers);
-        io.emit(`chat:${room}:join`, {name: user});
+        io.emit(`join`, {name: user});
 
         return () => {
-            io.emit(`chat:${room}:leave`);
+            io.emit(`leave`);
+            io.disconnect();
             io.off('message', updateMessages);
             io.off('name', updateName);
             io.off('users', updateUsers);
@@ -154,7 +158,7 @@
 
         }
         textfield = '';
-        io.emit(`chat:${room}:message`, {message});
+        io.emit(`message`, {message});
         messages = [
             ...messages,
             {
@@ -198,7 +202,9 @@
                 <h3 class="text-3xl text-slate-100 font-bold inline-flex items-center">
                     <slot name="icon">
                         <Icon icon="ic:round-meeting-room"></Icon>
-                    </slot>  {room}</h3>
+                        {room}
+                    </slot>
+                </h3>
                 <p class="rounded-full bg-sky-500 px-3 text-white grid items-center justify-center font-bold">{name}</p>
             </div>
             <div

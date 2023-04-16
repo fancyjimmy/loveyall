@@ -6,7 +6,8 @@ export type ChatHandler = {
     message: {
         message: string;
     },
-    disconnect: null
+    disconnect: null,
+    connect: null
 }
 
 export type ChatRoomHandler = {

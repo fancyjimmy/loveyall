@@ -165,7 +165,7 @@
 
     let role = "";
     let lobbyId = "";
-    let lobbySettings = null;
+    let lobbySettings: LobbySettings | null = null;
 
     let username = "";
 
@@ -209,8 +209,10 @@
     </div>
 
     <div class="flex-1">
-        {#if loadingState === "success"}
-            <Chat room="general" user={username} class="h-full w-full"></Chat>
+        {#if loadingState === "success" && lobbySettings !== null && typeof lobbySettings.chatRoomId === "string"}
+            <Chat room={lobbySettings.chatRoomId} user={username} class="h-full w-full">
+                <p slot="icon">Chat</p>
+            </Chat>
         {/if}
     </div>
 
