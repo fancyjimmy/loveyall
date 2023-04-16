@@ -4,6 +4,9 @@ import type {Namespace, Server, Socket} from "socket.io";
 import {LobbyHandler} from "./LobbyHandler";
 import type {TimerOptions} from "./TimeoutPolicy";
 import {ServerChatHandler} from "../chat";
+import {ChatGameManager} from "./chatGame/ChatGameManager";
+import {TestChatGame} from "./chatGame/example/TestChatGame";
+import {Hangman} from "./chatGame/example/Hangman";
 
 
 type StringTyped = { [key: string]: any };
@@ -49,8 +52,9 @@ export class LobbyManagerHandler extends ServerHandler<LobbyManagingEvents> {
     private readonly lobbies: Map<string, LobbyHandler> = new Map();
 
     private count = 0;
+
     private generateLobbyId(): string {
-        return (this.count++).toString();
+        return crypto.randomUUID();
     }
 
     private createLobby(io: Server, lobbySettings: LobbySettings, timeoutTime: TimerOptions): LobbyHandler {
@@ -92,16 +96,33 @@ export class LobbyManagerHandler extends ServerHandler<LobbyManagingEvents> {
 
 
                 const lobby = this.instantiateLobby(io, {...settings, chatRoomId}, {minutes: 2});
-                serverChat.whenMessage((message, socket) => {
+                serverChat.whenMessage((message, socket, chatuser) => {
                     lobby.inactivityTimer.resetTimer();
-                    if (message.startsWith("/ping")) {
-                        serverChat.broadcastMessage("pong", "Server", {server: true});
+                    if (message.startsWith("/disconnect")) {
+                        socket.disconnect(true);
+                        serverChat.broadcastMessage(`${chatuser.name} disconnected`, "Server", {server: true});
                     }
                 });
+                const chatGameManager = new ChatGameManager(serverChat);
+
+                chatGameManager.addChatGame((message, user, info) => {
+                    if (message.startsWith("test")) {
+                        return true;
+                    }
+                    return false;
+                }, new TestChatGame(serverChat), false);
+
+                chatGameManager.addChatGame((message, user, info) => {
+                    if (message.startsWith("/hangman")) {
+                        return true;
+                    }
+                    return false;
+                }, new Hangman(serverChat), false);
+
 
                 lobby.onStop(() => {
                     serverChat.closeRoom();
-                })
+                });
                 cb({
                     data: lobby.lobbyId, success: true, message: "Lobby created"
                 });

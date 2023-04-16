@@ -1,6 +1,6 @@
 import {logger} from "../Logging";
 import type {Server, Socket} from "socket.io";
-import type {ChatHandler, ChatUserInfo} from "./types";
+import type {ChatHandler, ChatUserInfo, MessageCallback} from "./types";
 import NamespaceHandler from "../socket/NamespaceHandler";
 
 
@@ -87,14 +87,21 @@ export default class ServerChatHandler extends NamespaceHandler<ChatHandler> {
     private closeCallback = () => {
     };
 
-    private messageCallback?: (message: string, user: Socket, info: ChatUserInfo) => void;
+    private messageCallbacks: Map<number, MessageCallback<any>> = new Map();
+    private messageCallbackCounter = 0;
 
     whenClosing(callback: () => void) {
         this.closeCallback = callback;
     }
 
-    whenMessage(callback: (message: string, user: Socket, info: ChatUserInfo) => void) {
-        this.messageCallback = callback;
+    whenMessage(callback: MessageCallback<any>): number {
+        let counter = this.messageCallbackCounter++;
+        this.messageCallbacks.set(counter, callback);
+        return counter;
+    }
+
+    removeMessageCallback(id: number) {
+        this.messageCallbacks.delete(id);
     }
 
     private userChangeCallback?: (count: number) => void;
@@ -140,11 +147,11 @@ export default class ServerChatHandler extends NamespaceHandler<ChatHandler> {
         return this.userSockets.size;
     }
 
-    getClientUsers() {
+    getClientUsers(): ChatUserInfo[] {
         return Array.from(this.userSockets.values()).map((name, index) => ({
             name,
-            index
-        }))
+            id: name
+        }));
     }
 
     setClientName(socket: Socket, name: string) {
@@ -182,8 +189,10 @@ export default class ServerChatHandler extends NamespaceHandler<ChatHandler> {
             throw new Error("User not found, but it shouldn't happen, because it is checked before");
         }
         this.namespace.except(socket.id).emit("message", {message, user, time: Date.now(), id: this.counter++});
-        if (this.messageCallback) {
-            this.messageCallback(message, socket, {id: socket.id, name: user});
+        if (this.messageCallbacks) {
+            for (let messageCallback of this.messageCallbacks.values()) {
+                messageCallback(message, socket, {id: socket.id, name: user});
+            }
         }
         logger.log("chat", `${user} sent message in room ${this.roomName}: ${message}`, {extra: {socketId: socket.id}});
     }

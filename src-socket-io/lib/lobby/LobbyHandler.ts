@@ -66,6 +66,8 @@ function preAuthenticate<T>(
     return typedNamespaceHandler;
 }
 
+// TODO kind of inefficient to preauthenticate every event
+// you could just have the connect Event return a boolean if it should be connected, so you only have to authenticate once
 export class LobbyHandler extends NamespaceHandler<LobbyEvents> {
     private lobby: Lobby;
     public readonly inactivityTimer: Timer;

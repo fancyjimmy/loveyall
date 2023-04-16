@@ -1,3 +1,5 @@
+import type {Socket} from "socket.io";
+
 export type ChatHandler = {
     join: {
         name: string;
@@ -22,3 +24,5 @@ export type ChatUserInfo = {
     id: string
     name: string,
 }
+
+export type MessageCallback<T> = (message: string, user: Socket, info: ChatUserInfo) => T;
