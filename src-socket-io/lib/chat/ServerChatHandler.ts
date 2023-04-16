@@ -188,8 +188,8 @@ export default class ServerChatHandler extends NamespaceHandler<ChatHandler> {
         logger.log("chat", `${user} sent message in room ${this.roomName}: ${message}`, {extra: {socketId: socket.id}});
     }
 
-    broadcastMessage(message: string, user: string) {
-        this.namespace.emit("message", {message, user, time: Date.now(), id: this.counter++});
+    broadcastMessage(message: string, user: string, extra?: any) {
+        this.namespace.emit("message", {message, user, time: Date.now(), id: this.counter++, extra});
     }
 
 }

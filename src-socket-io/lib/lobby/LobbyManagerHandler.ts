@@ -48,8 +48,9 @@ export class LobbyManagerHandler extends ServerHandler<LobbyManagingEvents> {
 
     private readonly lobbies: Map<string, LobbyHandler> = new Map();
 
+    private count = 0;
     private generateLobbyId(): string {
-        return Date.now().toString(16);
+        return (this.count++).toString();
     }
 
     private createLobby(io: Server, lobbySettings: LobbySettings, timeoutTime: TimerOptions): LobbyHandler {
@@ -90,11 +91,11 @@ export class LobbyManagerHandler extends ServerHandler<LobbyManagingEvents> {
                 serverChat.registerForEverySocket();
 
 
-                const lobby = this.instantiateLobby(io, {...settings, chatRoomId}, {minutes: 5});
+                const lobby = this.instantiateLobby(io, {...settings, chatRoomId}, {minutes: 2});
                 serverChat.whenMessage((message, socket) => {
                     lobby.inactivityTimer.resetTimer();
                     if (message.startsWith("/ping")) {
-                        serverChat.broadcastMessage("pong", "Server");
+                        serverChat.broadcastMessage("pong", "Server", {server: true});
                     }
                 });
 

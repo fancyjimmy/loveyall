@@ -10,8 +10,12 @@
         Response
     } from '../../../../src-socket-io/lib/lobby/types';
     import {getLobbyConnection} from '../../../lib/lobby/LobbyConnection';
-    import Chat from "$lib/components/chat/Chat.svelte";
-    import ServerMessage from "./ServerMessage.svelte";
+    import Chat from '$lib/components/chat/Chat.svelte';
+    import ServerMessage from './ServerMessage.svelte';
+    import Icon from '@iconify/svelte';
+    import {PUBLIC_SERVER_URL} from '$env/static/public';
+    import {dev} from '$app/environment';
+    import LobbySettingsComponent from './LobbySettingsComponent.svelte';
 
     export let data;
 
@@ -87,7 +91,7 @@
                 resolve(data);
             });
 
-            socket.once("error", (data) => {
+            socket.once('error', (data) => {
                 reject(data);
             });
             setTimeout(() => {
@@ -102,7 +106,7 @@
                 resolve(data);
             });
 
-            socket.once("error", (data) => {
+            socket.once('error', (data) => {
                 reject(data);
             });
             setTimeout(() => {
@@ -111,30 +115,38 @@
         });
     }
 
-
     let players: PlayerInfo[] = [];
 
     async function setPlayerData(playerInfos: PlayerInfo[]) {
         players = playerInfos;
+
+        for (let i = 0; i < players.length; i++) {
+            if (players[i].username === username) {
+                role = players[i].role;
+                break;
+            }
+        }
     }
 
     function initSocketEvents(socket: Socket) {
-        socket.on("playerChanged", (change) => {
-            console.log(change);
-            console.log("hi");
+        socket.on('playerChanged', (change) => {
             setPlayerData(change.players);
         });
 
+        socket.on('disconnect', () => {
+            loadingState = 'error';
+            error = 'Lobby closed';
+        });
     }
 
     let error = null;
     onMount(async () => {
-        let token = getSessionStorage("sessionKey");
+        let token = getSessionStorage('sessionKey');
         let rejoining = token !== null;
         if (!token) {
             try {
                 let playerAuthenticationResponse = await join();
-                setSessionStorage("sessionKey", playerAuthenticationResponse.sessionKey);
+                setSessionStorage('sessionKey', playerAuthenticationResponse.sessionKey);
                 token = playerAuthenticationResponse.sessionKey;
             } catch (e) {
                 loadingState = 'error';
@@ -150,10 +162,10 @@
                 await rejoin(socket, token);
             }
             const initData = await loadData(socket);
-            console.log(initData);
             players = initData.data.players;
             username = initData.data.username;
             role = initData.data.role;
+            lobbyId = initData.data.lobbyInfo.lobbyId;
             lobbySettings = initData.data.lobbyInfo.settings;
 
             initSocketEvents(socket);
@@ -164,20 +176,27 @@
         }
     });
 
-    let role = "";
-    let lobbyId = "";
+    let role = '';
+    let lobbyId = '';
     let lobbySettings: LobbySettings | null = null;
 
-    let username = "";
+    let username = '';
+
+    $: link = `${PUBLIC_SERVER_URL}lobby/${lobbyId}`;
+    let copied = false;
 
     function copyLink() {
-        navigator.clipboard.writeText(window.location.href);
+        if (copied) return;
+        navigator.clipboard.writeText(link);
+        copied = true;
+        setTimeout(() => {
+            copied = false;
+        }, 1000);
     }
-
 </script>
 
-<div class="flex w-screen h-screen">
-    <div class="flex-1">
+<div class="grid grid-cols-[2fr,1fr] w-screen h-screen">
+    <div>
         {#if loadingState === 'loading'}
             <p>Loading</p>
         {:else if loadingState === 'error'}
@@ -185,41 +204,75 @@
             <p>{JSON.stringify(error)}</p>
             <p><a href="/lobby">Create</a></p>
         {:else}
-            <div>
-                <p>{username}</p>
-                <p>{role}</p>
-                <button class="bg-yellow-200" on:click={copyLink}>
-                    <p>{data.lobbyId}</p>
+            <div class="w-full h-full bg-slate-800 p-3 relative">
+                <div class="text-5xl font-semibold inline-flex text-white justify-between w-full">
+					<span class="inline-flex items-center gap-3">
+						{username}
+                        {#if role === 'host'}
+							<span class="text-yellow-400">
+								<Icon icon="ic:round-star"/>
+							</span>
+						{/if}
+					</span>
+                    <div class="flex items-center">
+                        {#if dev}
+                            <!-- TODO Remove when prod -->
+                            <a
+                                    class="text-4xl p-2 hover:bg-slate text-lime-600 duration-200"
+                                    href={link}
+                                    target="_blank"
+                            >
+                                <Icon icon="material-symbols:add"/>
+                            </a>
+                        {/if}
 
-                </button>
-                <p>{JSON.stringify(lobbySettings)}</p>
-                <p>Players</p>
-                <div class="flex">
+                        <button
+                                class="text-4xl p-2 hover:bg-slate {copied
+								? 'text-sky-500'
+								: 'text-white'} duration-200"
+                                on:click={copyLink}
+                        >
+                            <Icon icon="material-symbols:content-copy"/>
+                        </button>
+                    </div>
+                </div>
+                <LobbySettingsComponent {lobbySettings} class="text-white text-xl p-2"/>
 
-                    {#each players.filter(player => player.username !== username) as player}
-                        <div class="bg-red-200">
-                            <p>{player.username}</p>
-                            <p>{player.role}</p>
+                <h3 class="text-3xl text-white font-semibold">Players</h3>
+                <div class="flex gap-2 mt-2">
+                    {#each players.filter((player) => player.username !== username) as player}
+                        <div class="bg-slate-400 rounded p-3">
+							<span class="text-xl inline-flex items-center gap-1">
+								{player.username}
+                                {#if player.role === 'host'}
+									<span class="text-yellow-400">
+										<Icon icon="ic:round-star"/>
+									</span>
+								{/if}
+							</span>
                             <p>{player.joinedTime}</p>
                         </div>
                     {/each}
                 </div>
             </div>
-
         {/if}
     </div>
 
-    <div class="flex-1">
-        {#if loadingState === "success" && lobbySettings !== null && typeof lobbySettings.chatRoomId === "string"}
-            <Chat room={lobbySettings.chatRoomId} user={username} class="h-full w-full" messageFormatter={(message) => {
-                if (message.user === "Server") {
-                    return ServerMessage;
-                }
-            }}>
+    <div>
+        {#if loadingState === 'success' && lobbySettings !== null && typeof lobbySettings.chatRoomId === 'string'}
+            <Chat
+                    room={lobbySettings.chatRoomId}
+                    user={username}
+                    class="h-screen w-full"
+                    userComponent={null}
+                    messageFormatter={(message) => {
+					if (message.extra?.server === true) {
+						return ServerMessage;
+					}
+				}}
+            >
                 <p slot="icon">Chat</p>
             </Chat>
         {/if}
     </div>
-
 </div>
-

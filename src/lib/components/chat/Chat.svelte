@@ -2,17 +2,16 @@
     import {afterUpdate, beforeUpdate, onMount} from 'svelte';
 
     import Icon from '@iconify/svelte';
-    import {fade, fly} from 'svelte/transition';
-    import {flip} from "svelte/animate";
     import {dev} from "$app/environment";
     import ioClient, {Socket} from "socket.io-client";
     import type {Message, MessageFormatter} from "./ChatFormatter";
-    import {colorFromName, darken, toHslString} from "$lib/components/chat/chatUtils";
     import DefaultChatMessage from "$lib/components/chat/DefaultChatMessage.svelte";
+    import ChatUsers from "./ChatUsers.svelte";
 
     export let room = '';
     export let user = '';
     export let messageFormatter: MessageFormatter = (_) => null;
+    export let userComponent = ChatUsers;
 
     let textfield = '';
     let name = '';
@@ -165,19 +164,10 @@
                 {/each}
             </div>
 
-            <div class="scrollbar-hidden h-8 gap-2 flex overflow-x-auto mt-2">
-                {#each users.filter((user) => user.name !== name) as user (user.name)}
-                    <div
-                            class="rounded-full px-3 text-white grid items-center justify-center font-bold"
-                            style="background-color: {toHslString(darken(colorFromName(user.name), 20))};"
-                            in:fly={{ key: user.name, x: 20 }}
-                            out:fade={{ key: user.name, duration: 200 }}
-                            animate:flip="{{duration: 300}}"
-                    >
-                        <p>{user.name}</p>
-                    </div>
-                {/each}
-            </div>
+            {#if userComponent}
+                <svelte:component this={userComponent} {users} self={{name}}/>
+            {/if}
+
 
             <div class="flex gap-3 p-2">
                 <input
