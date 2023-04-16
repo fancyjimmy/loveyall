@@ -83,7 +83,6 @@ export class LobbyHandler extends NamespaceHandler<LobbyEvents> {
             preAuthenticate<LobbyEvents>(
                 {
                     joined: (response, socket) => {
-                        console.log("hello");
                         let user = this.lobby.getPlayerBySessionKey(socket.handshake.auth.token)!;
                         response({
                             message: '',

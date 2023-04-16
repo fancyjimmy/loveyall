@@ -63,9 +63,6 @@ export class LobbyManagerHandler extends ServerHandler<LobbyManagingEvents> {
 
         console.log(this.lobbies.keys());
 
-        lobby.inactivityTimer.onReset(() => {
-            console.log("reset");
-        });
 
         lobby.inactivityTimer.onTimeout(() => {
             lobby.stop();
@@ -89,11 +86,17 @@ export class LobbyManagerHandler extends ServerHandler<LobbyManagingEvents> {
                 }
 
                 let chatRoomId: string = crypto.randomUUID();
-                const serverChat = new ServerChatHandler(io, chatRoomId, true);
+                const serverChat = new ServerChatHandler(io, chatRoomId, false);
                 serverChat.registerForEverySocket();
 
 
                 const lobby = this.instantiateLobby(io, {...settings, chatRoomId}, {minutes: 5});
+                serverChat.whenMessage((message, socket) => {
+                    lobby.inactivityTimer.resetTimer();
+                    if (message.startsWith("/ping")) {
+                        serverChat.broadcastMessage("pong", "Server");
+                    }
+                });
 
                 lobby.onStop(() => {
                     serverChat.closeRoom();

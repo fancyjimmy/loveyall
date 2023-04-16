@@ -6,13 +6,17 @@
     import {flip} from "svelte/animate";
     import {dev} from "$app/environment";
     import ioClient, {Socket} from "socket.io-client";
+    import type {Message, MessageFormatter} from "./ChatFormatter";
+    import {colorFromName, darken, toHslString} from "$lib/components/chat/chatUtils";
+    import DefaultChatMessage from "$lib/components/chat/DefaultChatMessage.svelte";
 
     export let room = '';
     export let user = '';
+    export let messageFormatter: MessageFormatter = (_) => null;
 
     let textfield = '';
     let name = '';
-    let messages = [];
+    let messages: Message[] = [];
     let loaded = false;
 
     function updateName(n) {
@@ -66,61 +70,6 @@
             io.off('users', updateUsers);
         };
     });
-
-    function colorFromName(name: string) {
-        const minSaturation = 50;
-        const maxSaturation = 100;
-        const minLightness = 30;
-        const maxLightness = 60;
-
-        const hashCode = (str: string) => {
-            let hash = 0;
-            for (let i = 0; i < str.length; i++) {
-                hash = str.charCodeAt(i) + ((hash << 5) - hash);
-            }
-            return hash;
-        };
-        const seededRandomNumberGenerator = (a) => {
-            return function () {
-                var t = (a += 0x6d2b79f5);
-                t = Math.imul(t ^ (t >>> 15), t | 1);
-                t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
-                return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-            };
-        };
-
-        const random = seededRandomNumberGenerator(hashCode(name));
-
-        const hue = Math.floor(random() * 360);
-        const saturation = Math.floor(random() * (maxSaturation - minSaturation) + minSaturation);
-        const lightness = Math.floor(random() * (maxLightness - minLightness) + minLightness);
-
-        return {
-            h: hue,
-            s: saturation,
-            l: lightness
-        };
-    }
-
-    function toHslString({h, s, l}) {
-        return `hsl(${h}, ${s}%, ${l}%)`;
-    }
-
-    function darken({h, s, l}, amount) {
-        return {
-            h,
-            s,
-            l: l - amount
-        };
-    }
-
-    function lighten({h, s, l}, amount) {
-        return {
-            h,
-            s,
-            l: l + amount
-        };
-    }
 
     let users = [];
 
@@ -212,29 +161,7 @@
                     bind:this={chatElement}
             >
                 {#each messages as message (message.id)}
-                    <article
-                            class:own-message={message.self}
-                            class:other-message={!message.self}
-                            class="message"
-                            in:fly={{ key: message.id, y: 20 }}
-                    >
-                        {#if !message.self}
-                            <p
-                                    class="text-sm font-bold mt-[-8px] select-none"
-                                    style="color: {toHslString(colorFromName(message.user))}"
-                            >
-                                {message.user}
-                            </p>
-                        {/if}
-                        <p class="{!message.self ? 'mt-[-8px]' : ''} break-all">{message.message}</p>
-                        <p
-                                class="absolute bottom-px right-1.5 text-xs font-semibold select-none"
-                                class:own-message={message.self}
-                                class:other-message={!message.self}
-                        >
-                            {new Date(message.time).toLocaleTimeString()}
-                        </p>
-                    </article>
+                    <svelte:component this={messageFormatter(message)?? DefaultChatMessage} {message}/>
                 {/each}
             </div>
 
@@ -277,51 +204,3 @@
     {/if}
 </div>
 
-<style lang="postcss">
-    .message {
-        @apply relative p-2 rounded-xl max-w-[85%] break-words grow-0 min-w-[6rem] pb-2.5;
-    }
-
-    article.own-message {
-        @apply bg-sky-500 justify-self-end self-end;
-        border-top-right-radius: 0;
-    }
-
-    article.own-message::before {
-        content: '';
-        position: absolute;
-
-        top: 0;
-        right: -0.8em;
-        width: 0;
-        height: 0;
-
-        border-top: solid 0.9em theme('colors.sky.500');
-        border-right: solid 0.9em transparent;
-    }
-
-    article.other-message::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: -0.8em;
-        width: 0;
-        height: 0;
-
-        border-top: solid 0.9em theme('colors.slate.200');
-        border-left: solid 0.9em transparent;
-    }
-
-    article.other-message {
-        @apply bg-slate-200;
-        border-top-left-radius: 0;
-    }
-
-    p.own-message {
-        @apply text-sky-800;
-    }
-
-    p.other-message {
-        @apply text-slate-700;
-    }
-</style>

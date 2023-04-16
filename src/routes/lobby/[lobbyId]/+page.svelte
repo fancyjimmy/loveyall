@@ -10,7 +10,8 @@
         Response
     } from '../../../../src-socket-io/lib/lobby/types';
     import {getLobbyConnection} from '../../../lib/lobby/LobbyConnection';
-    import Chat from "$lib/components/Chat.svelte";
+    import Chat from "$lib/components/chat/Chat.svelte";
+    import ServerMessage from "./ServerMessage.svelte";
 
     export let data;
 
@@ -210,7 +211,11 @@
 
     <div class="flex-1">
         {#if loadingState === "success" && lobbySettings !== null && typeof lobbySettings.chatRoomId === "string"}
-            <Chat room={lobbySettings.chatRoomId} user={username} class="h-full w-full">
+            <Chat room={lobbySettings.chatRoomId} user={username} class="h-full w-full" messageFormatter={(message) => {
+                if (message.user === "Server") {
+                    return ServerMessage;
+                }
+            }}>
                 <p slot="icon">Chat</p>
             </Chat>
         {/if}
