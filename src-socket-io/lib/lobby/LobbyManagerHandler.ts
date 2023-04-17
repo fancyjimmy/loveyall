@@ -74,6 +74,7 @@ export class LobbyManagerHandler extends ServerHandler<LobbyManagingEvents> {
             console.log("lobby should be stopped");
         });
         lobby.onStop(() => {
+            lobby.unregister(true);
             this.lobbies.delete(lobby.lobbyId);
         });
         lobby.start(io);

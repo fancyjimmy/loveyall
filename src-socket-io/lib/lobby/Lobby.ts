@@ -11,11 +11,11 @@ import {LifeCycle} from "./LifeCycle";
 import crypto from "crypto";
 
 export class Lobby {
-    get players(): Player[] {
+    get players(): Player<any>[] {
         return this.#players;
     }
 
-    #players: Player[] = [];
+    #players: Player<any>[] = [];
     public readonly lifeCycle = new LifeCycle<LobbyLifeCycleEvents>();
     private readonly rolePolicy: RolePolicy;
     private readonly secret: string;
@@ -77,12 +77,13 @@ export class Lobby {
         if (this.#players.length === 0) {
             role = LobbyRole.HOST;
         }
-        const player: Player = {
+        const player: Player<any> = {
             socket,
             username,
             role: role,
             joinedTime: new Date(),
-            sessionKey: ""
+            sessionKey: "",
+            extra: undefined
         };
 
         let count = 1;
@@ -104,7 +105,7 @@ export class Lobby {
         return {username: player.username, sessionKey: hashedSessionKey};
     }
 
-    private playerChanged(player: Player, joined: boolean): void {
+    private playerChanged(player: Player<any>, joined: boolean): void {
         this.lifeCycle.emit("playerChanged", {player, allPlayers: this.#players, joined});
     }
 
@@ -125,13 +126,13 @@ export class Lobby {
     }
 
 
-    private removePlayer(player: Player): void {
+    private removePlayer(player: Player<any>): void {
         this.#players = this.#players.filter(p => p !== player);
         this.lifeCycle.emit("playerRemoved", {player});
         this.lifeCycle.emit("playerChanged", {player, allPlayers: this.#players, joined: false});
     }
 
-    public tryReconnect(socket: Socket, sessionKey: string): Player {
+    public tryReconnect(socket: Socket, sessionKey: string): Player<any> {
         const player = this.#players.find(player => player.sessionKey === sessionKey);
         if (player) {
             return this.reconnect(socket, player);
@@ -141,7 +142,7 @@ export class Lobby {
 
     }
 
-    private reconnect(socket: Socket, player: Player): Player {
+    private reconnect(socket: Socket, player: Player<any>): Player<any> {
         this.startSocketEvents(socket);
         console.log(`${player.username} is reconnecting`);
         player.socket = socket;
@@ -177,7 +178,7 @@ export class Lobby {
         this.lifeCycle.emit("disconnected", {socket});
     }
 
-    getPlayerBySessionKey(sessionKey: string): Player | undefined {
+    getPlayerBySessionKey(sessionKey: string): Player<any> | undefined {
         return this.#players.find(player => {
             return player.sessionKey === sessionKey;
         });

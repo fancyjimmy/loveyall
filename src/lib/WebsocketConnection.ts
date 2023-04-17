@@ -1,8 +1,5 @@
 import ioClient from 'socket.io-client';
-import {PUBLIC_SERVER_URL} from '$env/static/public';
 
-
-const ENDPOINT = PUBLIC_SERVER_URL || 'http://localhost:5173;';
 
 let socket;
 

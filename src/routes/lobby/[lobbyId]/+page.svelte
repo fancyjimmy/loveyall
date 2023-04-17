@@ -114,9 +114,9 @@
         });
     }
 
-    let players: PlayerInfo[] = [];
+    let players: PlayerInfo<undefined>[] = [];
 
-    async function setPlayerData(playerInfos: PlayerInfo[]) {
+    async function setPlayerData(playerInfos: PlayerInfo<undefined>[]) {
         players = playerInfos;
 
         for (let i = 0; i < players.length; i++) {

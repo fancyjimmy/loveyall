@@ -7,6 +7,7 @@
     import type {Message, MessageFormatter} from "./ChatFormatter";
     import DefaultChatMessage from "$lib/components/chat/DefaultChatMessage.svelte";
     import ChatUsers from "./ChatUsers.svelte";
+    import EmojiBrowser from "$lib/components/chat/emoji/EmojiBrowser.svelte";
 
     export let room = '';
     export let user = '';
@@ -132,6 +133,17 @@
     afterUpdate(() => {
         if (autoscroll) chatElement.scrollTo(0, chatElement.scrollHeight);
     });
+    let emojiBrowser = false;
+
+
+    function addToInput(value: string) {
+        textfield += value;
+    }
+
+    function toggleEmoji() {
+        console.log(emojiBrowser);
+        emojiBrowser = !emojiBrowser;
+    }
 </script>
 
 <div class="bg-slate-900 flex flex-col p-3 overflow-y-auto flex-1 {$$props.class}">
@@ -169,6 +181,11 @@
             {/if}
 
 
+            <EmojiBrowser on:selected={(event) => {
+                   addToInput(event.detail.char);
+                }} class="{emojiBrowser ? '' : 'hidden'} duration-200"></EmojiBrowser>
+
+
             <div class="flex gap-3 p-2">
                 <input
                         class="text-slate-100 focus:ring-2 focus:ring-slate-500 placeholder-slate-300 focus:placeholder-slate-200 flex-1 px-3 rounded bg-slate-800 duration-200 ring-1 ring-slate-700 focus:outline-0"
@@ -182,9 +199,9 @@
                 />
                 <button
                         class="hover:scale-110 duration-200 p-3 text-sky-500 text-2xl grid justify-center rounded"
-                        on:click={() => {sendMessage(textfield)}}
+                        on:click={() => {toggleEmoji()}}
                 >
-                    <Icon icon="ic:round-send"/>
+                    😅
                 </button>
             </div>
 

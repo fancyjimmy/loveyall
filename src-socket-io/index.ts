@@ -3,13 +3,12 @@ import type {Server as HttpServer} from 'http';
 
 
 import {ServerChatHandler, ServerChatRoomHandler} from "./lib/chat";
-import {DebugHandler} from "./lib/debug";
 import {LobbyManagerHandler} from "./lib/lobby/LobbyManagerHandler";
 
 
 const serverHandlers = [
     new ServerChatRoomHandler(),
-    new DebugHandler(),
+    //new DebugHandler(),
     new LobbyManagerHandler(),
 ]
 
@@ -17,7 +16,6 @@ const serverHandlers = [
 export default function injectSocketIO(server: HttpServer) {
     const io = new Server(server, {
         cors: {
-            origin: 'http://localhost:5173',
             methods: ['GET', 'POST'],
         }
     });
@@ -25,7 +23,7 @@ export default function injectSocketIO(server: HttpServer) {
     const serverChatHandler = new ServerChatHandler(io, "general", false)
 
     const chatRoomNamespace = io.of("/chat/general");
-    serverChatHandler.registerForEverySocket(chatRoomNamespace);
+    serverChatHandler.registerForEverySocket();
 
     io.on('connection', (socket) => {
         serverHandlers.forEach(handler => {
