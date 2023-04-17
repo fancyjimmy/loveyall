@@ -34,7 +34,7 @@
 
 <style lang="postcss">
     .message {
-        @apply relative p-2 rounded-xl max-w-[85%] break-words grow-0 min-w-[6rem] pb-2.5;
+        @apply relative p-2 pb-3.5 rounded-xl max-w-[85%] break-words grow-0 min-w-[6rem];
     }
 
     article.own-message {

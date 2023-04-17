@@ -88,12 +88,12 @@
                 }
                 return a;
             }
-            if (message.startsWith("lorem")) {
+            if (message.startsWith("/lorem")) {
                 let rest = message.slice("lorem".length);
                 let count = parseInt(rest);
                 if (isNaN(count)) count = 5;
                 message = lorem(count);
-            } else if (message.startsWith("spam")) {
+            } else if (message.startsWith("/spam")) {
                 let a = message.slice("spam".length);
                 let b = parseInt(a);
                 message = lorem(Math.floor(Math.random() * 15) + 5);

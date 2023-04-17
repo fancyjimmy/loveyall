@@ -44,13 +44,14 @@ export enum LobbyRole {
     HOST = "host",
 }
 
-export type PlayerInfo = {
+export type PlayerInfo<T> = {
     username: string,
     role: LobbyRole,
     joinedTime: Date,
+    extra: T
 }
 
-export type Player = PlayerInfo & {
+export type Player<T> = PlayerInfo<T> & {
     socket: Socket,
     sessionKey: string,
     reconnecting?: boolean,

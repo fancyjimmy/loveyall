@@ -21,7 +21,7 @@ export type LobbyEvents = {
             lobbyInfo: LobbyInfo;
             username: string;
             role: LobbyRole;
-            players: PlayerInfo[];
+            players: PlayerInfo<undefined>[];
         }>
     ) => void;
     changeSettings: {
@@ -29,8 +29,8 @@ export type LobbyEvents = {
     };
     leave: null;
     rejoin:
-        (response: Response<PlayerInfo>) => void;
-    get: (response: Response<PlayerInfo>) => void;
+        (response: Response<PlayerInfo<undefined>>) => void;
+    get: (response: Response<PlayerInfo<undefined>>) => void;
     ping: () => void;
     disconnect: null;
     kick: {
@@ -40,11 +40,12 @@ export type LobbyEvents = {
     connect: null;
 };
 
-function playerToPlayerInfo(player: Player): PlayerInfo {
+function playerToPlayerInfo(player: Player<undefined>): PlayerInfo<undefined> {
     return {
         username: player.username,
         role: player.role,
-        joinedTime: player.joinedTime
+        joinedTime: player.joinedTime,
+        extra: undefined
     };
 }
 
@@ -118,7 +119,8 @@ export class LobbyHandler extends NamespaceHandler<LobbyEvents> {
                                 data: {
                                     username: data.username,
                                     role: data.role,
-                                    joinedTime: data.joinedTime
+                                    joinedTime: data.joinedTime,
+                                    extra: undefined
                                 }
                             });
                         } catch (e) {
@@ -132,7 +134,12 @@ export class LobbyHandler extends NamespaceHandler<LobbyEvents> {
                             response({
                                 message: '',
                                 success: true,
-                                data: {username: user.username, role: user.role, joinedTime: user.joinedTime}
+                                data: {
+                                    username: user.username,
+                                    role: user.role,
+                                    joinedTime: user.joinedTime,
+                                    extra: undefined
+                                }
                             });
                         }
                     },

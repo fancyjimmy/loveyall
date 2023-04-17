@@ -7,7 +7,7 @@ const ENDPOINT = PUBLIC_SERVER_URL || 'http://localhost:5173;';
 let socket;
 
 try {
-    socket = ioClient(ENDPOINT);
+    socket = ioClient("/");
 } catch (error) {
     alert('Error connecting to server. Please try again later.')
     console.error(error);

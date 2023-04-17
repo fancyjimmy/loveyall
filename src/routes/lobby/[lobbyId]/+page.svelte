@@ -13,7 +13,6 @@
     import Chat from '$lib/components/chat/Chat.svelte';
     import ServerMessage from './ServerMessage.svelte';
     import Icon from '@iconify/svelte';
-    import {PUBLIC_SERVER_URL} from '$env/static/public';
     import {dev} from '$app/environment';
     import LobbySettingsComponent from './LobbySettingsComponent.svelte';
 
@@ -182,12 +181,11 @@
 
     let username = '';
 
-    $: link = `${PUBLIC_SERVER_URL}lobby/${lobbyId}`;
+    let link = window.location.href;
     let copied = false;
 
     function copyLink() {
         if (copied) return;
-        navigator.clipboard.writeText(link);
         copied = true;
         setTimeout(() => {
             copied = false;
