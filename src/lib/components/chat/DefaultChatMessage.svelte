@@ -21,7 +21,7 @@
             {message.user}
         </p>
     {/if}
-    <p class="{!message.self ? 'mt-[-8px]' : ''} break-all">{message.message}</p>
+    <p class="{!message.self ? 'mt-[-8px]' : ''} break-words">{message.message}</p>
     <p
             class="absolute bottom-px right-1.5 text-xs font-semibold select-none"
             class:own-message={message.self}

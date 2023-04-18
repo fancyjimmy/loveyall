@@ -1,4 +1,5 @@
-export const emojis: { char: string, name: string, codes: string | number, group: string }[] = [{
+export type Emoji = { char: string, name: string, codes: string | number, group: string };
+export const emojis: Emoji[] = [{
     "char": "💯",
     "name": "hundred_points",
     "codes": "1F4AF",
@@ -1853,7 +1854,7 @@ export const emojis: { char: string, name: string, codes: string | number, group
     "name": "moai",
     "codes": "1F5FF",
     "group": "Objects"
-}, {"char": "🤶", "name": "mrs._claus", "codes": "1F936", "group": "People & Body"}, {
+}, {"char": "🤶", "name": "mrs_claus", "codes": "1F936", "group": "People & Body"}, {
     "char": "💪",
     "name": "flexed_biceps",
     "codes": "1F4AA",

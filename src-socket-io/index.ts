@@ -16,7 +16,6 @@ const serverHandlers = [
 export default function injectSocketIO(server: HttpServer) {
     const io = new Server(server, {
         cors: {
-            origin: "https://benevolent-duckanoo-c52100.netlify.app/",
             methods: ['GET', 'POST'],
         }
     });

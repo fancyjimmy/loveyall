@@ -15,6 +15,7 @@
         'Animals & Nature'
     ];
 
+
     let groupValues = groups.map((group) => {
         return {name: group, emojis: emojis.filter((emoji) => emoji.group === group)};
     });
@@ -22,9 +23,32 @@
 
     let hovered = '';
     let hoveredGroup = '';
+
+
+    function clickOutside(node) {
+
+        const handleClick = event => {
+            if (node && !node.contains(event.target) && !event.defaultPrevented) {
+                node.dispatchEvent(
+                    new CustomEvent('click_outside', node)
+                )
+            }
+        }
+
+        document.addEventListener('click', handleClick, true);
+
+        return {
+            destroy() {
+                document.removeEventListener('click', handleClick, true);
+            }
+        }
+    }
 </script>
 
 <div
+        use:clickOutside
+        on:click_outside={()=>{dispatch("blurred")}}
+        on:blur={()=>{dispatch("blurred")}}
         class=" absolute bottom-28 right-5 h-96 w-96 flex flex-col p-3 bg-slate-700 rounded-lg border-2 border-slate-800 {$$props.class}"
 >
     <input
@@ -35,22 +59,41 @@
     />
 
     <div class="flex-1 overflow-y-scroll scrollbar-hidden">
-        {#each groupValues as group}
-            <p class="m-3 text-2xl text-white font-semibold">{group.name}</p>
+        {#if filter.trim() === ""}
+
+            {#each groupValues as group}
+                <div>
+                    <p class="mt-3 text-2xl text-white font-semibold">{group.name}</p>
+                    <div
+                            class="grid grid-cols-7 text-4xl"
+                            on:mouseover={(event) => {
+					hovered = event.target.innerText;
+				}}
+                    >
+                        {#each group.emojis.filter((emoji) => emoji.name.includes(filter.toLowerCase())) as emoji}
+                            <div class="hover:bg-slate-500 rounded aspect-square items-center flex select-none text-center align-middle"
+                                 on:click={()=>{dispatch("selected", emoji)}}>{emoji.char}</div>
+                        {/each}
+                    </div>
+                </div>
+            {/each}
+        {:else}
             <div
                     class="grid grid-cols-7 text-4xl"
                     on:mouseover={(event) => {
 					hovered = event.target.innerText;
 				}}
             >
-                {#each group.emojis.filter((emoji) => emoji.name.includes(filter.toLowerCase())) as emoji}
+                {#each emojis.filter((emoji) => emoji.name.includes(filter.toLowerCase())) as emoji}
                     <div class="hover:bg-slate-500 rounded aspect-square items-center flex select-none text-center align-middle"
                          on:click={()=>{dispatch("selected", emoji)}}>{emoji.char}</div>
                 {/each}
             </div>
-        {/each}
+
+        {/if}
+
     </div>
-    <div class="flex h-12 items-center">
+    <div class="flex h-12 mt-2 items-center">
 		<span class="text-4xl aspect-square">
 			{hovered.length <= 3 ? hovered : ''}
 		</span>
