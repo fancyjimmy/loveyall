@@ -214,9 +214,6 @@
             {/if}
 
             <EmojiBrowser
-                    on:blurred={() => {
-					emojiBrowser = false;
-				}}
                     on:selected={(event) => {
 					addToInput(event.detail.char);
 				}}
@@ -227,7 +224,7 @@
             />
 
             <GifBrowser bind:show={gifBrowser}
-                        on:clickOutside={() => {
+                        on:blurred={() => {
                             gifBrowser = false;
                         }}
                         on:selected={(event) => {

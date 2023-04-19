@@ -5,7 +5,6 @@
 
     import {clickOutside} from '$lib/util';
 
-
     let dispatch = createEventDispatcher();
 
     // create a GiphyFetch with your api key
@@ -30,7 +29,6 @@
         acc[i] = [];
         return acc;
     }, {} as Record<number, any[]>);
-
 
     function splitArray(arr: any[], n: number) {
         let len = arr.length,
@@ -115,19 +113,15 @@
     let filtered = false;
 
     async function useUnFiltered() {
-        filtered = true;
         let gifResult: GifsResult = await fetchGifs(fetched);
 
         fetchInto(gifResult.data);
 
         const intersctionObserver = new IntersectionObserver(
             async () => {
-                if (!filtered) {
-                    const newGifs = await fetchGifs(++fetched);
-                    fetchInto(newGifs.data);
-                    alreadyObserved = 0;
-                }
-
+                const newGifs = await fetchGifs(++fetched);
+                fetchInto(newGifs.data);
+                alreadyObserved = 0;
             },
             {
                 root: root,
@@ -146,14 +140,18 @@
 </script>
 
 {#if show}
-    <div class="{$$props.class} flex flex-col" bind:this={root} use:clickOutside>
+    <div
+            class="{$$props.class} flex flex-col"
+            bind:this={root}
+            use:clickOutside
+            on:click_outside={() => {
+			dispatch('blurred');
+		}}
+    >
         <input
                 placeholder="Search Giphy"
                 type="text"
                 bind:value={filter}
-                on:change={async ( ) => {
-                    useFiltered(filter);
-                }}
                 class="mb-2 text-slate-100 focus:ring-2 focus:ring-slate-500 placeholder-slate-300 focus:placeholder-slate-200 p-2 rounded bg-slate-800 duration-200 ring-1 ring-slate-700 focus:outline-0"
         />
 
@@ -161,52 +159,27 @@
                 class="overflow-y-scroll scrollbar-hidden grid gap-3 flex-1"
                 style="grid-template-columns: repeat({cols}, 1fr) "
         >
-            {#if filtered}
-                {#each Object.keys(filteredGifs) as key, i}
-                    <div class="flex flex-col gap-3">
-                        {#each gifs[key] as gif}
-                            <div
-                                    on:click={() => {
+            {#each Object.keys(gifs) as key, i}
+                <div class="flex flex-col gap-3">
+                    {#each gifs[key] as gif}
+                        <div
+                                on:click={() => {
 								dispatch('selected', gif);
 							}}
-                            >
-                                <img
-                                        src={gif.images.preview_gif.url}
-                                        alt={gif.title}
-                                        class="rounded object-cover w-full"
-                                />
-                            </div>
-                        {/each}
-                        <div bind:this={observed[key]} class="bg-slate-600 h-40 rounded"/>
-                        {#each Array.from([0, 0]) as _, i}
-                            <div class="bg-slate-600 h-40 rounded"/>
-                        {/each}
-                    </div>
-                {/each}
-            {:else}
-                {#each Object.keys(gifs) as key, i}
-                    <div class="flex flex-col gap-3">
-                        {#each gifs[key] as gif}
-                            <div
-                                    on:click={() => {
-								dispatch('selected', gif);
-							}}
-                            >
-                                <img
-                                        src={gif.images.preview_gif.url}
-                                        alt={gif.title}
-                                        class="rounded object-cover w-full"
-                                />
-                            </div>
-                        {/each}
-                        <div bind:this={observed[key]} class="bg-slate-600 h-40 rounded"/>
-                        {#each Array.from([0, 0]) as _, i}
-                            <div class="bg-slate-600 h-40 rounded"/>
-                        {/each}
-                    </div>
-                {/each}
-            {/if}
-
+                        >
+                            <img
+                                    src={gif.images.preview_gif.url}
+                                    alt={gif.title}
+                                    class="rounded object-cover w-full"
+                            />
+                        </div>
+                    {/each}
+                    <div bind:this={observed[key]} class="bg-slate-600 h-40 rounded"/>
+                    {#each Array.from([0, 0]) as _, i}
+                        <div class="bg-slate-600 h-40 rounded"/>
+                    {/each}
+                </div>
+            {/each}
         </div>
     </div>
 {/if}

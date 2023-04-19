@@ -70,7 +70,7 @@ export class LobbyManagerHandler extends ServerHandler<LobbyManagingEvents> {
 
 
         lobby.inactivityTimer.onTimeout(() => {
-            //lobby.stop();
+            lobby.stop();
             console.log("lobby should be stopped");
         });
         lobby.onStop(() => {
@@ -97,7 +97,7 @@ export class LobbyManagerHandler extends ServerHandler<LobbyManagingEvents> {
                 serverChat.registerForEverySocket();
 
 
-                const lobby = this.instantiateLobby(io, {...settings, chatRoomId}, {minutes: 30});
+                const lobby = this.instantiateLobby(io, {...settings, chatRoomId}, {minutes: 5});
                 serverChat.whenMessage((message, socket, chatuser) => {
                     lobby.inactivityTimer.resetTimer();
                     if (message.startsWith("/disconnect")) {
