@@ -23,7 +23,7 @@ export default class ServerChatRoomHandler extends ServerHandler<ChatRoomHandler
         io.on("connection", listener);
 
         // old sockets are able to join the new room
-        room.registerForEverySocket();
+        room.register();
 
         room.whenClosing(() => {
             logger.log("chatroom", `room ${room.roomName} was closed`)

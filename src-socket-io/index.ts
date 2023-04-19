@@ -23,7 +23,7 @@ export default function injectSocketIO(server: HttpServer) {
     const serverChatHandler = new ServerChatHandler(io, "general", false)
 
     const chatRoomNamespace = io.of("/chat/general");
-    serverChatHandler.registerForEverySocket();
+    serverChatHandler.register();
 
     io.on('connection', (socket) => {
         serverHandlers.forEach(handler => {

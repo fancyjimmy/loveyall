@@ -1,7 +1,5 @@
-import type ServerSocketHandler from "./ServerSocketHandler";
 import type {Server, Socket} from "socket.io";
 import type {TypedServerHandler} from "./types";
-import type NamespaceHandler from "./NamespaceHandler";
 
 
 type ServerListener<T> = {
@@ -11,7 +9,7 @@ type ServerListener<T> = {
 }
 
 
-export class ServerHandler<T> implements ServerSocketHandler {
+export abstract class ServerHandler<T> {
 
     private listeners: ServerListener<any> = {};
 
@@ -52,30 +50,12 @@ export class ServerHandler<T> implements ServerSocketHandler {
         }
     }
 
-    registerForEverySocket(io: Server) {
-        io.sockets.sockets.forEach(socket => this.registerSocket(io, socket));
-    }
-
-    unregister(socket: Socket) {
-        for (let key in this.listeners) {
-            try {
-                socket.off(key, this.listeners[key][socket.id]);
-            } catch (e) {
-                console.error(e);
-            }
-        }
-    }
-
-    registerNamespaceHandler<T>(io: Server, namespace: string, namespaceHandler: NamespaceHandler<T>) {
-        const namespaceConnection = io.of(namespace);
-        namespaceConnection.on("connection", socket => namespaceHandler.registerSocket(namespaceConnection, socket));
-    }
 
 
     protected handler: TypedServerHandler<T>;
     protected nameSpace: string;
 
-    constructor(nameSpace: string, handler: TypedServerHandler<T>) {
+    protected constructor(nameSpace: string, handler: TypedServerHandler<T>) {
         this.handler = handler;
         this.nameSpace = nameSpace;
     }

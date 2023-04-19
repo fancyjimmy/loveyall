@@ -94,7 +94,7 @@ export class LobbyManagerHandler extends ServerHandler<LobbyManagingEvents> {
 
                 let chatRoomId: string = crypto.randomUUID();
                 const serverChat = new ServerChatHandler(io, chatRoomId, false);
-                serverChat.registerForEverySocket();
+                serverChat.register();
 
 
                 const lobby = this.instantiateLobby(io, {...settings, chatRoomId}, {minutes: 5});

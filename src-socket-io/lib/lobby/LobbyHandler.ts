@@ -49,11 +49,11 @@ function playerToPlayerInfo(player: Player<undefined>): PlayerInfo<undefined> {
     };
 }
 
-function preAuthenticate<T>(
-    typedNamespaceHandler: TypedNamespaceHandler<T>,
+function preAuthenticate<T, K>(
+    typedNamespaceHandler: TypedNamespaceHandler<T, K>,
     authenticate: (socket: Socket) => boolean,
     onAuthenticationFail: (event: string, socket: Socket) => void
-): TypedNamespaceHandler<T> {
+): TypedNamespaceHandler<T, K> {
     for (let key in typedNamespaceHandler) {
         const original = typedNamespaceHandler[key];
         typedNamespaceHandler[key] = (data, socket, io) => {
@@ -87,7 +87,7 @@ export class LobbyHandler extends NamespaceHandler<LobbyEvents> {
         super(
             `/lobby/${lobbyId}`,
             io,
-            preAuthenticate<LobbyEvents>(
+            preAuthenticate<LobbyEvents, any>(
                 {
                     joined: (response, socket) => {
                         let user = this.lobby.getPlayerBySessionKey(socket.handshake.auth.token)!;
