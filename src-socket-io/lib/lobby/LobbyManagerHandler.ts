@@ -1,5 +1,5 @@
 import {ServerHandler} from "../socket/ServerHandler";
-import type {LobbyManagingEvents, LobbySettings} from "./types";
+import type {LobbyClientInfo, LobbyManagingEvents, LobbySettings} from "./types";
 import type {Namespace, Server, Socket} from "socket.io";
 import {LobbyHandler} from "./LobbyHandler";
 import type {TimerOptions} from "./TimeoutPolicy";
@@ -155,8 +155,32 @@ export class LobbyManagerHandler extends ServerHandler<LobbyManagingEvents> {
                     return;
                 }
                 response({message: "", success: true, data: {isPrivate: lobby.settings.isPrivate}});
+            },
+            getAll: (response) => {
+                response({
+                    success: true,
+                    message: "",
+                    data: this.getPublicLobbies()
+                });
             }
         });
+
+    }
+
+    getPublicLobbies(): LobbyClientInfo[] {
+        let lobbies: LobbyClientInfo[] = [];
+        for (let lobby of this.lobbies.values()) {
+            if (!lobby.settings.isPrivate) {
+                lobbies.push({
+                    lobbyId: lobby.lobbyId,
+                    maxPlayers: lobby.settings.maxPlayers,
+                    playerNumber: lobby.playerNumber
+                });
+            }
+
+        }
+
+        return lobbies;
 
     }
 

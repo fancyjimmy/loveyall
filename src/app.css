@@ -40,6 +40,12 @@
     size-adjust: 80%;
 }
 
+@layer components {
+    .chat-img {
+        @apply object-cover rounded shadow-lg my-2;
+    }
+}
+
 @layer utilities {
     .font-apple-ii {
         font-family: 'Apple II', sans-serif;

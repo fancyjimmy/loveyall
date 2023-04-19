@@ -74,6 +74,10 @@ export class LobbyHandler extends NamespaceHandler<LobbyEvents> {
     public readonly inactivityTimer: Timer;
     private emitter: Emitter<LobbyClientEvents> = new Emitter<LobbyClientEvents>();
 
+    get playerNumber(): number {
+        return this.lobby.players.length;
+    }
+
     constructor(
         io: Server,
         public readonly lobbyId: string,

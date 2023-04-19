@@ -71,7 +71,10 @@
     async function join(): Promise<PlayerAuthenticationResponse> {
         let passwordAuthenticated = await isPasswordAuthenticated();
 
-        let name = prompt('Please enter your name');
+        let name;
+        while (!name) {
+            name = prompt('Please enter your name');
+        }
         let password = null;
         if (passwordAuthenticated) {
             password = prompt('Please enter your password');

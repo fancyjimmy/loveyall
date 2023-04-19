@@ -5,6 +5,14 @@
 
     export let message: Message;
 
+    function parseMessage(text: string) {
+        // TODO check for cross site scripting
+        let value = text;
+        value = value.replace(/\p{Emoji_Presentation}/ug, "<span class='text-xl'>$&</span>");
+        value = value.replace(/https?:[^)''"]+\.(?:jpg|jpeg|gif|png)((?:\?|\&)([\w]+)(?:\=|\&?)([\w+,.-]*))*/, "<img src='$&' class='chat-img'/>")
+        return value;
+    }
+
 </script>
 
 <article
@@ -21,7 +29,7 @@
             {message.user}
         </p>
     {/if}
-    <p class="{!message.self ? 'mt-[-8px]' : ''} break-words">{message.message}</p>
+    <p class="{!message.self ? 'mt-[-8px]' : ''} break-all">{@html parseMessage(message.message)}</p>
     <p
             class="absolute bottom-px right-1.5 text-xs font-semibold select-none"
             class:own-message={message.self}

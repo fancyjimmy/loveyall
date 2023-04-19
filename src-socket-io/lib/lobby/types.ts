@@ -37,8 +37,14 @@ export type LobbyManagingEvents = {
     get: [{
         lobbyId: string,
     }, (response: Response<Partial<LobbySettings>>) => void],
+    getAll: (response: Response<LobbyClientInfo[]>) => void
 };
 
+export type LobbyClientInfo = {
+    lobbyId: string,
+    maxPlayers: number,
+    playerNumber: number,
+}
 export enum LobbyRole {
     PLAYER = "player",
     HOST = "host",
@@ -66,10 +72,10 @@ export type LobbyClientEvents = {
     joined: {
         lobbyInfo: LobbyInfo,
         role: LobbyRole,
-        players: PlayerInfo[],
+        players: PlayerInfo<any>[],
     },
     playerChanged: {
-        players: PlayerInfo[],
+        players: PlayerInfo<any>[],
     },
     error: {}
 }
@@ -101,21 +107,21 @@ export type LobbyServerEvents = {
 
 export type LobbyLifeCycleEvents = {
     joined: {
-        player: Player,
+        player: Player<any>,
     },
     hostChanged: {
-        player: Player,
+        player: Player<any>,
     },
     playerChanged: {
-        player: Player,
+        player: Player<any>,
         joined: boolean,
-        allPlayers: Player[],
+        allPlayers: Player<any>[],
     }
     playerRemoved: {
-        player: Player
+        player: Player<any>
     },
     left: {
-        player: Player,
+        player: Player<any>,
     },
     disconnected: {
         socket: Socket,

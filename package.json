@@ -27,6 +27,8 @@
   },
   "type": "module",
   "dependencies": {
+    "@giphy/js-components": "^5.11.1",
+    "@giphy/js-fetch-api": "^4.8.1",
     "@iconify/svelte": "^3.1.1",
     "express": "^4.18.2",
     "socket.io": "^4.6.1",

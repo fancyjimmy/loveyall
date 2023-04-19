@@ -1,6 +1,7 @@
 <script lang="ts">
     import {emojis} from '$lib/components/chat/emoji/emojis';
     import {createEventDispatcher} from "svelte";
+    import {clickOutside} from '$lib/util';
 
 
     let dispatch = createEventDispatcher();
@@ -25,24 +26,7 @@
     let hoveredGroup = '';
 
 
-    function clickOutside(node) {
 
-        const handleClick = event => {
-            if (node && !node.contains(event.target) && !event.defaultPrevented) {
-                node.dispatchEvent(
-                    new CustomEvent('click_outside', node)
-                )
-            }
-        }
-
-        document.addEventListener('click', handleClick, true);
-
-        return {
-            destroy() {
-                document.removeEventListener('click', handleClick, true);
-            }
-        }
-    }
 </script>
 
 <div
@@ -55,7 +39,7 @@
             placeholder=":emoji:"
             type="text"
             bind:value={filter}
-            class="text-slate-100 focus:ring-2 focus:ring-slate-500 placeholder-slate-300 focus:placeholder-slate-200 p-2 rounded bg-slate-800 duration-200 ring-1 ring-slate-700 focus:outline-0"
+            class="mb-2 text-slate-100 focus:ring-2 focus:ring-slate-500 placeholder-slate-300 focus:placeholder-slate-200 p-2 rounded bg-slate-800 duration-200 ring-1 ring-slate-700 focus:outline-0"
     />
 
     <div class="flex-1 overflow-y-scroll scrollbar-hidden">
