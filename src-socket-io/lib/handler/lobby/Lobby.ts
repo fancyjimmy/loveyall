@@ -7,8 +7,9 @@ import {
 } from "./types";
 import {DefaultRolePolicy, type RolePolicy} from "./policy/role";
 import type {Socket} from "socket.io";
-import {LifeCycle} from "./LifeCycle";
+import {LifeCycle} from "../../utilities/LifeCycle";
 import crypto from "crypto";
+import {DefaultLobbyTimeoutPolicy, LobbyTimeoutPolicy} from "./policy/time";
 
 export class Lobby {
     get players(): Player<any>[] {
@@ -18,10 +19,12 @@ export class Lobby {
     #players: Player<any>[] = [];
     public readonly lifeCycle = new LifeCycle<LobbyLifeCycleEvents>();
     private readonly rolePolicy: RolePolicy;
+    private readonly timeoutPolicy: LobbyTimeoutPolicy;
     private readonly secret: string;
 
     constructor(public readonly lobbyInfo: LobbyInfo) {
         this.rolePolicy = new DefaultRolePolicy();
+        this.timeoutPolicy = new DefaultLobbyTimeoutPolicy({minutes: 5});
         this.lifeCycle.when("playerRemoved", ({player}) => {
             if (player.role === LobbyRole.HOST) {
                 const nextHost = this.rolePolicy.nextHost(this.#players, player);

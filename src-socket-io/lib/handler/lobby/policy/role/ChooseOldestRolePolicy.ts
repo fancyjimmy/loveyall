@@ -1,5 +1,5 @@
 import type {Player, PlayerInfo} from "../../types";
-import type {RolePolicy} from "./RolePolicy";
+import type RolePolicy from "./RolePolicy";
 
 export default class ChooseOldestRolePolicy implements RolePolicy {
     nextHost(players: Player[], leavingPlayer: PlayerInfo): Player {

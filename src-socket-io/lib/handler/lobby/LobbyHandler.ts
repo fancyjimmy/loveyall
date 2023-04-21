@@ -10,7 +10,6 @@ import type {
     PlayerInfo,
     Response
 } from './types';
-import {DefaultTimer, type Timer, type TimerOptions} from './policy/time/TimeoutPolicy';
 import type {Server, Socket} from 'socket.io';
 import type {TypedNamespaceHandler} from '../../socket/types';
 import {Emitter} from './LobbyManagerHandler';
@@ -67,11 +66,8 @@ function preAuthenticate<T>(
     return typedNamespaceHandler;
 }
 
-// TODO kind of inefficient to preauthenticate every event
-// you could just have the connect Event return a boolean if it should be connected, so you only have to authenticate once
 export class LobbyHandler extends NamespaceHandler<LobbyEvents> {
     private lobby: Lobby;
-    public readonly inactivityTimer: Timer;
     private emitter: Emitter<LobbyClientEvents> = new Emitter<LobbyClientEvents>();
 
     get playerNumber(): number {
@@ -82,7 +78,6 @@ export class LobbyHandler extends NamespaceHandler<LobbyEvents> {
         io: Server,
         public readonly lobbyId: string,
         public readonly lobbySetting: LobbySettings,
-        timeoutTime: TimerOptions
     ) {
         super(
             `/lobby/${lobbyId}`,
@@ -182,7 +177,6 @@ export class LobbyHandler extends NamespaceHandler<LobbyEvents> {
         );
 
         this.lobby = new Lobby({lobbyId, settings: this.lobbySetting});
-        this.inactivityTimer = new DefaultTimer(timeoutTime); // TODO make this actually work liek intended
         this.lobby.lifeCycle.when('playerChanged', ({player, allPlayers, joined}) => {
             if (allPlayers.length === 0) {
                 this.stop();
@@ -198,7 +192,6 @@ export class LobbyHandler extends NamespaceHandler<LobbyEvents> {
         namespace.on('connection', (socket) => {
             this.registerSocket(namespace, socket);
         });
-        this.inactivityTimer.startTimer();
     }
 
 
@@ -206,7 +199,6 @@ export class LobbyHandler extends NamespaceHandler<LobbyEvents> {
         console.log(this.namespaceName + " stopping");
         this.stopCallBacks.forEach((cb) => cb());
         this.remove();
-        this.inactivityTimer.stop();
     }
 
     joinAsHost(
