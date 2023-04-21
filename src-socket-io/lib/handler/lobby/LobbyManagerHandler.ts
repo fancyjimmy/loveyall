@@ -1,8 +1,8 @@
-import {ServerHandler} from "../socket/ServerHandler";
+import {ServerHandler} from "../../socket/ServerHandler";
 import type {LobbyClientInfo, LobbyManagingEvents, LobbySettings} from "./types";
 import type {Namespace, Server, Socket} from "socket.io";
 import {LobbyHandler} from "./LobbyHandler";
-import type {TimerOptions} from "./TimeoutPolicy";
+import type {TimerOptions} from "./policy/time/TimeoutPolicy";
 import {ServerChatHandler} from "../chat";
 import {ChatGameManager} from "./chatGame/ChatGameManager";
 import {TestChatGame} from "./chatGame/example/TestChatGame";

@@ -1,6 +1,6 @@
-import NamespaceHandler from "../socket/NamespaceHandler";
+import NamespaceHandler from "../../socket/NamespaceHandler";
 import type {Server} from "socket.io";
-import type {TypedNamespaceHandler} from "../socket/types";
+import type {TypedNamespaceHandler} from "../../socket/types";
 import type {Player} from "../lobby/types";
 
 export abstract class Game<Events, PlayerType> extends NamespaceHandler<Events> {

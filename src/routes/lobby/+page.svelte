@@ -1,7 +1,7 @@
 <script lang="ts">
     import {io} from '../../lib/WebsocketConnection';
     import {goto} from '$app/navigation';
-    import type {CreatedClientReturn, LobbyClientInfo} from '../../../src-socket-io/lib/lobby/types';
+    import type {CreatedClientReturn, LobbyClientInfo} from '../../../src-socket-io/lib/handler/lobby/types';
     import {onMount} from 'svelte';
     import Icon from "@iconify/svelte";
 

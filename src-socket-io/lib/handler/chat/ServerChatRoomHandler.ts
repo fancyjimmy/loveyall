@@ -1,6 +1,5 @@
-import {ServerHandler} from "../socket/ServerHandler";
+import {ServerHandler} from "../../socket/ServerHandler";
 import type {Server, Socket} from "socket.io";
-import {logger} from "../Logging";
 import {ServerChatHandler} from "./index";
 import type {ChatRoomHandler} from "./types";
 
@@ -14,24 +13,59 @@ const unreservedChars = [
 export default class ServerChatRoomHandler extends ServerHandler<ChatRoomHandler> {
     rooms = new Map<string, ServerChatHandler>();
 
-    listenToChatRoom(io: Server, room: ServerChatHandler) {
-        const listener = (socket: Socket) => {
-            room.registerSocket(io.of(room.namespaceName), socket);
-        };
+    constructor() {
+        super("chatRoom", {
+            create: ({name}, socket, io) => {
+                name = name.trim();
 
-        // new Sockets are automatically able to join the new room
-        io.on("connection", listener);
+                if (name === "general") {
+                    this.emitError(socket, "general isn't a valid room name");
+                    console.log("chatroom", `room ${name} is not allowed`, {extra: {socketId: socket.id}})
+                    return;
+                }
+                if (!this.isValidName(name)) {
+                    this.emitError(socket, `${name} isn't a valid room name, because it has illegal characters`);
+                    console.log("chatroom", `room ${name} is not allowed`, {extra: {socketId: socket.id}})
+                    name = this.removeIllegalChars(name);
+                    console.log("chatroom", `room ${name} is used instead`, {extra: {socketId: socket.id}})
+                }
 
-        // old sockets are able to join the new room
-        room.register();
+                if (!name) {
+                    this.emitError(socket, `room name is empty`);
+                    console.log("chatroom", `room name is empty`, {extra: {socketId: socket.id}})
+                    return;
+                }
 
-        room.whenClosing(() => {
-            logger.log("chatroom", `room ${room.roomName} was closed`)
-            this.rooms.delete(room.roomName);
-            // new Sockets are not able to join the new room
-            room.unregister(true);
-            // old sockets are not able to join the new room
-            this.broadcastRoomChange(io);
+                if (this.rooms.has(name)) {
+                    this.emitError(socket, `${name} already exists`);
+                    socket.emit("roomExists", {name: name})
+                    console.log("chatroom", `room ${name} already exists`, {extra: {socketId: socket.id}})
+                    return;
+                } else {
+                    console.log("chatroom", `room ${name} created`, {extra: {socketId: socket.id}})
+                    const room = new ServerChatHandler(io, name, true);
+                    this.rooms.set(room.roomName, room);
+                    room.whenUserChanges((count) => {
+                        this.broadcastRoomChange(io);
+                    });
+                    this.broadcastRoomChange(io);
+                    socket.emit("roomCreated", {name: room.roomName});
+                    this.listenToChatRoom(io, room);
+                }
+            },
+            get: (data, socket, io) => {
+                console.log("chatroom", `room list requested`, {extra: {socketId: socket.id}, severity: -1});
+                this.broadcastRoomChange(io);
+                this.emitRooms(socket);
+                socket.join(this.nameSpace);
+            },
+            leave: (data, socket, io) => {
+                console.log("chatroom", `room list not listened to anymore`, {
+                    extra: {socketId: socket.id},
+                    severity: -1
+                });
+                socket.leave(this.nameSpace);
+            }
         });
     }
 
@@ -58,59 +92,24 @@ export default class ServerChatRoomHandler extends ServerHandler<ChatRoomHandler
         socket.emit("error", error);
     }
 
-    constructor() {
-        super("chatRoom", {
-            create: ({name}, socket, io) => {
-                name = name.trim();
+    listenToChatRoom(io: Server, room: ServerChatHandler) {
+        const listener = (socket: Socket) => {
+            room.registerSocket(io.of(room.namespaceName), socket);
+        };
 
-                if (name === "general") {
-                    this.emitError(socket, "general isn't a valid room name");
-                    logger.log("chatroom", `room ${name} is not allowed`, {extra: {socketId: socket.id}})
-                    return;
-                }
-                if (!this.isValidName(name)) {
-                    this.emitError(socket, `${name} isn't a valid room name, because it has illegal characters`);
-                    logger.log("chatroom", `room ${name} is not allowed`, {extra: {socketId: socket.id}})
-                    name = this.removeIllegalChars(name);
-                    logger.log("chatroom", `room ${name} is used instead`, {extra: {socketId: socket.id}})
-                }
+        // new Sockets are automatically able to join the new room
+        io.on("connection", listener);
 
-                if (!name) {
-                    this.emitError(socket, `room name is empty`);
-                    logger.log("chatroom", `room name is empty`, {extra: {socketId: socket.id}})
-                    return;
-                }
+        // old sockets are able to join the new room
+        room.register();
 
-                if (this.rooms.has(name)) {
-                    this.emitError(socket, `${name} already exists`);
-                    socket.emit("roomExists", {name: name})
-                    logger.log("chatroom", `room ${name} already exists`, {extra: {socketId: socket.id}})
-                    return;
-                } else {
-                    logger.log("chatroom", `room ${name} created`, {extra: {socketId: socket.id}})
-                    const room = new ServerChatHandler(io, name, true);
-                    this.rooms.set(room.roomName, room);
-                    room.whenUserChanges((count) => {
-                        this.broadcastRoomChange(io);
-                    });
-                    this.broadcastRoomChange(io);
-                    socket.emit("roomCreated", {name: room.roomName});
-                    this.listenToChatRoom(io, room);
-                }
-            },
-            get: (data, socket, io) => {
-                logger.log("chatroom", `room list requested`, {extra: {socketId: socket.id}, severity: -1});
-                this.broadcastRoomChange(io);
-                this.emitRooms(socket);
-                socket.join(this.nameSpace);
-            },
-            leave: (data, socket, io) => {
-                logger.log("chatroom", `room list not listened to anymore`, {
-                    extra: {socketId: socket.id},
-                    severity: -1
-                });
-                socket.leave(this.nameSpace);
-            }
+        room.whenClosing(() => {
+            console.log("chatroom", `room ${room.roomName} was closed`)
+            this.rooms.delete(room.roomName);
+            // new Sockets are not able to join the new room
+            room.unregister(true);
+            // old sockets are not able to join the new room
+            this.broadcastRoomChange(io);
         });
     }
 

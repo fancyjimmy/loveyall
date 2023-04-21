@@ -5,7 +5,7 @@ import {
     type Player,
     type PlayerAuthenticationResponse
 } from "./types";
-import {DefaultRolePolicy, type RolePolicy} from "./RolePolicy";
+import {DefaultRolePolicy, type RolePolicy} from "./policy/role";
 import type {Socket} from "socket.io";
 import {LifeCycle} from "./LifeCycle";
 import crypto from "crypto";

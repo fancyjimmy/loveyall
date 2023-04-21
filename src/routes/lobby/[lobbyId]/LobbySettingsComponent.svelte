@@ -1,5 +1,5 @@
 <script lang="ts">
-    import type {LobbySettings} from "../../../../src-socket-io/lib/lobby/types";
+    import type {LobbySettings} from "../../../../src-socket-io/lib/handler/lobby/types";
 
     export let lobbySettings: LobbySettings;
 </script>

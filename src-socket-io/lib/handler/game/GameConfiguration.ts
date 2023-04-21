@@ -1,4 +1,4 @@
-import type {TypedNamespaceHandler} from "../socket/types";
+import type {TypedNamespaceHandler} from "../../socket/types";
 import type {Namespace} from "socket.io";
 import {RoomHandler} from "./RoomHandler";
 import type {Player} from "../lobby/types";

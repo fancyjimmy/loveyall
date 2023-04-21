@@ -44,6 +44,10 @@
     .chat-img {
         @apply object-cover rounded shadow-lg my-2;
     }
+
+    .tooltip {
+        @apply bg-slate-900 text-white;
+    }
 }
 
 @layer utilities {

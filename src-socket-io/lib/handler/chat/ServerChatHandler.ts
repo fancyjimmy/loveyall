@@ -1,7 +1,6 @@
-import {logger} from '../Logging';
 import type {Server, Socket} from 'socket.io';
 import type {ChatHandler, ChatUserInfo, MessageCallback} from './types';
-import NamespaceHandler from '../socket/NamespaceHandler';
+import NamespaceHandler from '../../socket/NamespaceHandler';
 
 const adjectives = [
     'Happy',
@@ -190,14 +189,14 @@ export default class ServerChatHandler extends NamespaceHandler<ChatHandler> {
     ) {
         super(`chat/${roomName}`, io, {
             join: ({name}, socket, io) => {
-                logger.log('chat', `${socket.id} tried to join room ${this.roomName}`, {severity: -1});
+                console.log('chat', `${socket.id} tried to join room ${this.roomName}`, {severity: -1});
                 // if (roomName !== this.roomName) {
                 //     return;
                 // }
                 // user already in room
 
                 if (this.userSockets.has(socket.id)) {
-                    logger.log('chat', `${name} tried to join room ${this.roomName} but he is already in it`);
+                    console.log('chat', `${name} tried to join room ${this.roomName} but he is already in it`);
                     return;
                 }
 
@@ -227,7 +226,7 @@ export default class ServerChatHandler extends NamespaceHandler<ChatHandler> {
             // if it is temporary and somebody created it, but didn't join it, it will be deleted after 1 minute
             setTimeout(() => {
                 if (this.userSockets.size === 0) {
-                    logger.log(
+                    console.log(
                         'chatroom',
                         `room ${this.roomName} was closed because it was temporary and nobody even joined`
                     );
@@ -277,7 +276,7 @@ export default class ServerChatHandler extends NamespaceHandler<ChatHandler> {
     leaveRoom(socket: Socket) {
         const user = this.getUser(socket);
         if (user) {
-            logger.log('chat', `${user} left room ${this.roomName}`);
+            console.log('chat', `${user} left room ${this.roomName}`);
         }
         socket.leave(this.namespaceName);
         this.userSockets.delete(socket.id);
@@ -287,7 +286,7 @@ export default class ServerChatHandler extends NamespaceHandler<ChatHandler> {
         }
         if (this.userSockets.size === 0 && this.temporary) {
             this.closeRoom();
-            logger.log(
+            console.log(
                 'chatroom',
                 `room ${this.roomName} was closed because it was temporary and everybody left`,
                 {extra: {socketId: socket.id}}
@@ -321,7 +320,7 @@ export default class ServerChatHandler extends NamespaceHandler<ChatHandler> {
             this.userChangeCallback(this.userCount);
         }
 
-        logger.log('chat', `${name} joined room ${this.roomName}`, {extra: {socketId: socket.id}});
+        console.log('chat', `${name} joined room ${this.roomName}`, {extra: {socketId: socket.id}});
     }
 
     userNameTaken(name: string) {
@@ -353,7 +352,7 @@ export default class ServerChatHandler extends NamespaceHandler<ChatHandler> {
                 messageCallback(message, socket, {id: socket.id, name: user});
             }
         }
-        logger.log('chat', `${user} sent message in room ${this.roomName}: ${message}`, {
+        console.log('chat', `${user} sent message in room ${this.roomName}: ${message}`, {
             extra: {socketId: socket.id}
         });
     }

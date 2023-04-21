@@ -1,168 +1,40 @@
 <script lang="ts">
-    import Icon from '@iconify/svelte';
-    import {io} from '../../lib/WebsocketConnection';
-    import {afterUpdate, beforeUpdate, onMount} from 'svelte';
-    import {dev} from '$app/environment';
+    import {dev} from "$app/environment";
+    import DebugConsole from "$lib/components/debug/DebugConsole.svelte";
 
-    let url = '/chat';
-    let numberOfFrames = '3';
+    let frames = [];
 
-    let realUrl = '';
-    let realNumberOfFrames = 0;
-
-    let didGo = true;
-
-    let textfield = '';
-    let log = [];
-
-    if (dev) {
-        onMount(() => {
-            io.on('debug', (data) => {
-                log = data;
-            });
-
-            io.on("debugError", (data) => {
-                alert(data);
-            })
-
-            io.on("debugUpdate", (data) => {
-                log = [...log, data];
-            })
-        });
-    }
+    function spawnNewFrame() {
+        const extraPath = prompt("What url?");
+        let stringCount = prompt("How many?") || "0";
 
 
-    let a = {};
-
-    function go() {
-        didGo = false;
-        realUrl = url;
-        realNumberOfFrames = parseInt(numberOfFrames);
-    }
-
-    function askDebug() {
-        if (textfield.trim() === "cls") {
-            log = [];
-            textfield = '';
-            return;
-        }
-        io.emit('debug:get', {command: textfield.trim(), runDangerously});
-        textfield = '';
-    }
-
-    function stringify(message) {
-        switch (typeof message) {
-            case 'string':
-                return message;
-            case 'object': {
-                if (message === null) {
-                    return 'null';
-                }
-                if (message instanceof Array) {
-                    return `[${message.map(stringify).join(', ')}]`;
-                }
-                return JSON.stringify(message);
+        try {
+            let numCount = parseInt(stringCount);
+            if (!isNaN(numCount)) {
+                const test = Array(numCount).fill(extraPath);
+                frames = [...frames, ...test];
             }
-            default:
-                return message;
+        } catch (e) {
+
         }
     }
-
-    let output;
-    let autoscroll;
-
-    beforeUpdate(() => {
-        autoscroll = output && (output.offsetHeight + output.scrollTop) > (output.scrollHeight - 20);
-    });
-
-    afterUpdate(() => {
-        if (autoscroll) output.scrollTo(0, output.scrollHeight);
-    });
-
-    //TODO Check why Chat.svelte doesn't work now that i have put it with a +layout
-    let runDangerously = false;
 </script>
 
 {#if dev}
-    <div class="relative flex flex-col bg-slate-600" style="height: 100vh; width: 100vw;">
-        {#if didGo}
-            <div class="absolute left-0 right-0 top-0 mx-0">
-                <div>
-                    <input
-                            class="text-slate-300 px-2 rounded bg-slate-800 duration-200 border border-slate-700 focus:outline-0"
-                            type="number"
-                            bind:value={numberOfFrames}
-                    />
-                    <input
-                            class="text-slate-300 px-2 rounded bg-slate-800 duration-200 border border-slate-700 focus:outline-0"
-                            type="text"
-                            bind:value={url}
-                    />
-                    <button on:click={go}>Go</button>
+    <div class="w-screen h-screen fixed">
+
+        <div class="w-screen h-screen grid grid-cols-2 overflow-y-auto scrollbar-hidden">
+            {#each frames as frame}
+                <div class="h-screen">
+                    <iframe src="http://localhost:5173/{frame}" class="w-full h-full"></iframe>
                 </div>
-            </div>
-        {/if}
-
-        <div class="w-full flex flex-1">
-            {#if !didGo}
-                {#each Array.from({length: realNumberOfFrames}) as _, i}
-                    <div class="flex-1 flex flex-col">
-                        <iframe src={realUrl} bind:this={a[i]} class="h-full w-full flex-1" style="margin: 0;"/>
-                        <p>{a[i]?.contentWindow?.location?.href ?? "not Loaded"}</p>
-                    </div>
-                {/each}
-            {/if}
+            {/each}
         </div>
-
-        <div class="w-full p-3">
-            <div class="h-48">
-                <ul class="h-full w-full overflow-y-auto flex flex-col gap-1" bind:this={output}>
-                    {#each log as message, i}
-                        <li class="{i % 2 == 0 ? 'bg-slate-500' : 'bg-slate-400'} rounded">
-                            <details class="flex flex-col">
-                                <summary>
-                                    <code
-                                    >{message.type}[{new Date(
-                                        message.time
-                                    ).toLocaleTimeString()}]: {message.message}</code
-                                    >
-                                </summary>
-                                <div class="overflow-scroll">
-                                    <pre>{JSON.stringify(message.options, null, 4)}</pre>
-                                </div>
-                            </details>
-                        </li>
-                    {/each}
-                </ul>
-            </div>
-            <div class="flex gap-3">
-                <input
-                        class="text-slate-300 flex-1 px-2 rounded bg-slate-800 duration-200 border border-slate-700 focus:outline-0"
-                        spellcheck="false"
-                        placeholder="Write something..."
-                        type="text"
-                        bind:value={textfield}
-                        on:keydown={(event) => {
-						if (event.key === 'Enter') {
-							askDebug();
-						}
-					}}
-                />
-                <button
-                        class="hover:scale-110 duration-200 p-3 text-sky-500 text-2xl grid justify-center rounded"
-                        on:click={askDebug}
-                >
-                    <Icon icon="ic:round-send"/>
-                </button>
-
-                <input type="checkbox" bind:checked={runDangerously}>
-            </div>
-        </div>
+        <button class="absolute top-5 left-5 bg-lime-500 p-2 rounded z-[5]" on:click={spawnNewFrame}>New Frame</button>
     </div>
-{:else}
-    <p>Fuuuuuuckk this shouldn't be here. only in dev...</p>
+    <DebugConsole></DebugConsole>
 {/if}
-
 <style>
     details summary::-webkit-details-marker {
         display: none;

@@ -1,4 +1,4 @@
-import type {TypedNamespaceHandler} from "../socket/types";
+import type {TypedNamespaceHandler} from "../../socket/types";
 import type {Namespace, Server, Socket} from "socket.io";
 
 type SocketEventListener = {

@@ -1,4 +1,4 @@
-import NamespaceHandler from '../socket/NamespaceHandler';
+import NamespaceHandler from '../../socket/NamespaceHandler';
 import {Lobby} from './Lobby';
 import type {
     LobbyClientEvents,
@@ -10,9 +10,9 @@ import type {
     PlayerInfo,
     Response
 } from './types';
-import {DefaultTimer, type Timer, type TimerOptions} from './TimeoutPolicy';
+import {DefaultTimer, type Timer, type TimerOptions} from './policy/time/TimeoutPolicy';
 import type {Server, Socket} from 'socket.io';
-import type {TypedNamespaceHandler} from '../socket/types';
+import type {TypedNamespaceHandler} from '../../socket/types';
 import {Emitter} from './LobbyManagerHandler';
 
 export type LobbyEvents = {
@@ -49,11 +49,11 @@ function playerToPlayerInfo(player: Player<undefined>): PlayerInfo<undefined> {
     };
 }
 
-function preAuthenticate<T, K>(
-    typedNamespaceHandler: TypedNamespaceHandler<T, K>,
+function preAuthenticate<T>(
+    typedNamespaceHandler: TypedNamespaceHandler<T>,
     authenticate: (socket: Socket) => boolean,
     onAuthenticationFail: (event: string, socket: Socket) => void
-): TypedNamespaceHandler<T, K> {
+): TypedNamespaceHandler<T> {
     for (let key in typedNamespaceHandler) {
         const original = typedNamespaceHandler[key];
         typedNamespaceHandler[key] = (data, socket, io) => {
@@ -87,7 +87,7 @@ export class LobbyHandler extends NamespaceHandler<LobbyEvents> {
         super(
             `/lobby/${lobbyId}`,
             io,
-            preAuthenticate<LobbyEvents, any>(
+            preAuthenticate<LobbyEvents>(
                 {
                     joined: (response, socket) => {
                         let user = this.lobby.getPlayerBySessionKey(socket.handshake.auth.token)!;
@@ -205,7 +205,7 @@ export class LobbyHandler extends NamespaceHandler<LobbyEvents> {
     stop() {
         console.log(this.namespaceName + " stopping");
         this.stopCallBacks.forEach((cb) => cb());
-        this.remove(this.io);
+        this.remove();
         this.inactivityTimer.stop();
     }
 

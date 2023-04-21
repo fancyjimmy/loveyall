@@ -8,7 +8,7 @@
         PlayerAuthenticationResponse,
         PlayerInfo,
         Response
-    } from '../../../../src-socket-io/lib/lobby/types';
+    } from '../../../../src-socket-io/lib/handler/lobby/types';
     import {getLobbyConnection} from '../../../lib/lobby/LobbyConnection';
     import Chat from '$lib/components/chat/Chat.svelte';
     import ServerMessage from './ServerMessage.svelte';
@@ -117,9 +117,9 @@
         });
     }
 
-    let players: PlayerInfo<undefined>[] = [];
+    let players: PlayerInfo[] = [];
 
-    async function setPlayerData(playerInfos: PlayerInfo<undefined>[]) {
+    async function setPlayerData(playerInfos: PlayerInfo[]) {
         players = playerInfos;
 
         for (let i = 0; i < players.length; i++) {
@@ -189,6 +189,7 @@
 
     function copyLink() {
         if (copied) return;
+        navigator.clipboard.writeText(link);
         copied = true;
         setTimeout(() => {
             copied = false;
