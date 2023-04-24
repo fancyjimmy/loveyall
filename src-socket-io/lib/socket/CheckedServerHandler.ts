@@ -1,12 +1,9 @@
-import type {Namespace, Server, Socket} from 'socket.io';
-
-import zod, {ZodObject, type ZodRawShape} from 'zod';
-import type {CheckedNamespaceOption, TypedNamespaceHandler} from './types';
-import NamespaceHandler from './NamespaceHandler';
-import ClientError from '../ClientError';
+import {ServerHandler} from "./ServerHandler";
+import type {Namespace, Server, Socket} from "socket.io";
+import type {CheckedNamespaceOption, TypedNamespaceHandler} from "./types";
+import type {z} from "zod";
 import type {DefaultEventsMap, EventsMap} from "socket.io/dist/typed-events";
-
-const Test = zod.object({name: zod.string(), other: zod.number()});
+import ClientError from "../ClientError";
 
 function defaultClientError<T extends { error: { error: string } }>(
     error: Error,
@@ -25,22 +22,19 @@ function defaultServerError<T extends { error: { error: string } }>(
     console.error(error);
 }
 
-type CheckedZHandler<T extends ZodRawShape> = {
-    [key: string]: ZodObject<T>;
-};
 
-export default class CheckedNamespaceHandler<
-    K extends ZodObject<Record<string, any>>,
+export default class CheckedServerHandler<
+    K extends z.ZodObject<Record<string, any>>,
     TSocketData = any,
     TListenEvents extends EventsMap = DefaultEventsMap,
     TEmitEvents extends EventsMap = DefaultEventsMap,
     TServerSideEvents extends EventsMap = DefaultEventsMap,
-> extends NamespaceHandler<zod.infer<K>, TSocketData, TListenEvents, TEmitEvents, TServerSideEvents> {
+> extends ServerHandler<z.infer<K>, TSocketData, TListenEvents, TEmitEvents, TServerSideEvents> {
     constructor(
-        namespace: string,
+        prefix: string,
         io: Server<TListenEvents, TEmitEvents, TServerSideEvents, TSocketData>,
         private validator: K,
-        handler: TypedNamespaceHandler<zod.infer<typeof validator>, TListenEvents, TEmitEvents, TServerSideEvents, TSocketData>,
+        handler: TypedNamespaceHandler<z.infer<typeof validator>, TListenEvents, TEmitEvents, TServerSideEvents, TSocketData>,
         private options: CheckedNamespaceOption<TListenEvents, TEmitEvents, TServerSideEvents, TSocketData> = {
             onClientError: defaultClientError,
             onServerError: defaultServerError,
@@ -49,8 +43,9 @@ export default class CheckedNamespaceHandler<
             }
         }
     ) {
-        super(namespace, io, handler);
+        super(prefix, io, handler);
     }
+
 
     registerSocket(io: Namespace, socket: Socket): void {
 
@@ -70,7 +65,7 @@ export default class CheckedNamespaceHandler<
             const handlerValidator = this.validator.shape[key];
             // .toString() is needed because when the key is disconnect,
             // disconnecting and error have different signatures
-            socket.on(key.toString(), (...args: any[]) => {
+            socket.on(`${this.prefix}:${key.toString()}`, (...args: any[]) => {
                 let parameter;
                 if (args.length <= 1) {
                     parameter = handlerValidator.safeParse(args[0]);
@@ -91,7 +86,6 @@ export default class CheckedNamespaceHandler<
                 try {
                     this.handler[key](parameter.data, socket, io);
                 } catch (error) {
-                    console.log("errora")
                     if (error instanceof ClientError) {
                         if (this.options.onClientError) {
                             this.options.onClientError(error, socket, io);

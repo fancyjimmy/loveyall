@@ -1,237 +1,180 @@
-import NamespaceHandler from '../../socket/NamespaceHandler';
-import {Lobby} from './Lobby';
-import type {
-    LobbyClientEvents,
-    LobbyInfo,
-    LobbyRole,
-    LobbySettings,
-    Player,
-    PlayerAuthenticationResponse,
-    PlayerInfo,
-    Response
+import CheckedNamespaceHandler from '../../socket/CheckedNamespaceHandler';
+import type {Server} from 'socket.io';
+import {
+    createResponseSchema,
+    type LobbyClientEventFunctions,
+    type Player,
+    type PlayerInfo,
+    ZGeneralPlayerInfo,
+    ZJoinInfo
 } from './types';
-import type {Server, Socket} from 'socket.io';
-import type {TypedNamespaceHandler} from '../../socket/types';
-import {Emitter} from './LobbyManagerHandler';
+import {z} from 'zod';
+import {
+    type GeneralLobbyInfo,
+    type LobbyCreationSettings,
+    type LobbyJoinOption,
+    type LobbySettings,
+    ZLobbyCreationSettings
+} from './manage/types';
+import type {LobbyTimeoutPolicy} from './policy/time';
+import {DefaultLobbyTimeoutPolicy} from './policy/time';
+import {type AuthenticationPolicy, AuthenticationPolicyFactory} from './policy/authentication';
+import type {RolePolicy} from './policy/role';
+import {DefaultRolePolicy} from './policy/role';
+import type {DefaultEventsMap} from 'socket.io/dist/typed-events';
+import ClientError from '../../ClientError';
+import {ServerChatHandler} from '../chat';
+import * as crypto from 'crypto';
+import PlayerManager from "./playerManager/PlayerManager";
 
-export type LobbyEvents = {
-    joined: (
-        response: Response<{
-            lobbyInfo: LobbyInfo;
-            username: string;
-            role: LobbyRole;
-            players: PlayerInfo<undefined>[];
-        }>
-    ) => void;
-    changeSettings: {
-        settings: Partial<LobbySettings>;
-    };
-    leave: null;
-    rejoin:
-        (response: Response<PlayerInfo<undefined>>) => void;
-    get: (response: Response<PlayerInfo<undefined>>) => void;
-    ping: () => void;
-    disconnect: null;
-    kick: {
-        username: string;
-    };
-
-    connect: null;
-};
-
-function playerToPlayerInfo(player: Player<undefined>): PlayerInfo<undefined> {
+export function playerInfoToGeneralPlayerInfo(player: PlayerInfo): Omit<PlayerInfo, 'sessionKey'> {
     return {
         username: player.username,
         role: player.role,
-        joinedTime: player.joinedTime,
-        extra: undefined
+        joinedTime: player.joinedTime
     };
 }
 
-function preAuthenticate<T>(
-    typedNamespaceHandler: TypedNamespaceHandler<T>,
-    authenticate: (socket: Socket) => boolean,
-    onAuthenticationFail: (event: string, socket: Socket) => void
-): TypedNamespaceHandler<T> {
-    for (let key in typedNamespaceHandler) {
-        const original = typedNamespaceHandler[key];
-        typedNamespaceHandler[key] = (data, socket, io) => {
-            if (authenticate(socket)) {
-                original(data, socket, io);
-            } else {
-                onAuthenticationFail(key, socket);
-            }
-        };
-    }
-    return typedNamespaceHandler;
-}
+export const ZLobbyEvents = z.object({
+    joined: z.function().args(ZJoinInfo).returns(z.void()),
+    changeSettings: z.tuple([ZLobbyCreationSettings.partial(), createResponseSchema(z.void())]),
+    leave: z.function().args(z.void()).returns(z.void()),
+    get: z.function().args(createResponseSchema(ZGeneralPlayerInfo)).returns(z.void()),
+    ping: z.function().args(z.void()).returns(z.void()),
+    kick: z.tuple([z.string(), createResponseSchema(z.void())])
+});
 
-export class LobbyHandler extends NamespaceHandler<LobbyEvents> {
-    private lobby: Lobby;
-    private emitter: Emitter<LobbyClientEvents> = new Emitter<LobbyClientEvents>();
+export class LobbyHandler extends CheckedNamespaceHandler<
+    typeof ZLobbyEvents,
+    { player: PlayerInfo },
+    DefaultEventsMap,
+    LobbyClientEventFunctions
+> {
+    public readonly lobbySettings: LobbySettings;
+    public readonly chatHandler: ServerChatHandler;
+    private timeoutPolicy: LobbyTimeoutPolicy;
+    private authenticationPolicy: AuthenticationPolicy;
+    private rolePolicy: RolePolicy;
+    #chatRoomId: string | null = null;
+    private playerManager: PlayerManager;
 
-    get playerNumber(): number {
-        return this.lobby.players.length;
-    }
-
-    constructor(
-        io: Server,
-        public readonly lobbyId: string,
-        public readonly lobbySetting: LobbySettings,
-    ) {
+    constructor(io: Server, private lobbyId: string, settings: LobbyCreationSettings) {
         super(
-            `/lobby/${lobbyId}`,
+            `lobby/${lobbyId}`,
             io,
-            preAuthenticate<LobbyEvents>(
-                {
-                    joined: (response, socket) => {
-                        let user = this.lobby.getPlayerBySessionKey(socket.handshake.auth.token)!;
-                        response({
-                            message: '',
-                            success: true,
-                            data: {
-                                username: user.username,
-                                lobbyInfo: this.lobby.lobbyInfo,
-                                role: user.role,
-                                players: this.lobby.players.map(playerToPlayerInfo)
-                            }
-                        });
-                    },
-                    kick: ({username}, socket) => {
-                        if (this.lobby.isHost(socket)) {
-                            this.lobby.kick(username);
-                        }
-                    },
-                    changeSettings: ({settings}, socket) => {
-                        this.clientActivity();
-                        console.log(settings);
-                    },
-                    leave: (data, socket) => {
-                        this.lobby.leave(socket);
-                    },
-                    rejoin: (response, socket) => {
-                        try {
-                            let data = {...this.lobby.tryReconnect(socket, socket.handshake.auth.token)};
-                            response({
-                                message: '',
-                                success: true,
-                                data: {
-                                    username: data.username,
-                                    role: data.role,
-                                    joinedTime: data.joinedTime,
-                                    extra: undefined
-                                }
-                            });
-                        } catch (e) {
-                            if (e instanceof Error) response({message: e.message, success: false, data: null});
-                            return;
-                        }
-                    },
-                    get: (response, socket) => {
-                        let user = this.lobby.getPlayerBySessionKey(socket.handshake.auth.token);
-                        if (user) {
-                            response({
-                                message: '',
-                                success: true,
-                                data: {
-                                    username: user.username,
-                                    role: user.role,
-                                    joinedTime: user.joinedTime,
-                                    extra: undefined
-                                }
-                            });
-                        }
-                    },
-                    ping: (response, socket) => {
-                        response();
-                    },
-                    disconnect: (data, socket) => {
-                        console.log(socket.handshake.auth);
-                        this.lobby.waitForReconnect(socket, 5000);
-                    },
-                    connect: (data, socket) => {
-                        let user = this.lobby.getPlayerBySessionKey(socket.handshake.auth.token)!;
-                        this.emitter.emit(socket, 'joined', {
-                            lobbyInfo: this.lobby.lobbyInfo,
-                            role: user.role,
-                            players: this.lobby.players.map(playerToPlayerInfo)
-                        });
-                    }
-                },
-                (socket) => {
-                    if (socket.handshake.auth.token === undefined) return false;
-                    const token = socket.handshake.auth.token;
-                    let user = this.lobby.getPlayerBySessionKey(token);
-                    if (user) {
-                        return true;
-                    }
-                    console.log("user", token);
-                    return false;
-                },
-                (event, socket) => {
-                    socket.emit('error', {
-                        message: 'You are not authenticated to perform this action'
+            ZLobbyEvents,
+            {
+                joined: (callback, socket, io) => {
+                    callback({
+                        username: socket.data!.player!.username,
+                        role: socket.data!.player!.role,
+                        chatRoomId: this.chatRoomId,
+                        isPrivate: this.lobbySettings.isPrivate,
+                        lobbyId: this.lobbyId,
+                        players: this.playerManager
+                            .getPlayers()
+                            .map(playerInfoToGeneralPlayerInfo),
+                        name: this.lobbySettings.name,
+                        maxPlayers: this.lobbySettings.maxPlayers,
+                        authenticationPolicy: this.lobbySettings.authenticationPolicy
                     });
+                },
+                changeSettings: (data, socket, io) => {
+                },
+                leave: (callback, socket, io) => {
+                    this.playerManager.removePlayer(socket);
+                    callback();
+                    socket.disconnect();
+                },
+                get: (data, socket, io) => {
+                },
+                ping: (cb, socket, io) => {
+                    cb();
+                },
+                kick: (data, socket, io) => {
                 }
-            )
+            },
+            {
+                onClientError: (error, socket, io) => {
+                    socket.emit('error', {message: error.message});
+                },
+                onServerError: (error, socket, io) => {
+                    socket.emit('error', {message: 'Unknown Error'});
+                    console.error(error);
+                },
+                onConnection: (socket, io) => {
+                    // throws a client Error if the player is not authenticated
+                    try {
+                        this.playerManager.bindPlayerFromSocket(socket);
+                    } catch (e) {
+                        if (e instanceof ClientError) {
+                            console.log(e);
+                            socket.emit('error', {message: e.message});
+                        } else {
+                            console.error(e);
+                            socket.emit('error', {message: 'Unknown Error'});
+                        }
+                        return false;
+                    }
+                    return true;
+                },
+                onDisconnect: (socket, io) => {
+                    this.playerManager.unbindPlayerFromSocket(socket);
+                }
+            }
         );
 
-        this.lobby = new Lobby({lobbyId, settings: this.lobbySetting});
-        this.lobby.lifeCycle.when('playerChanged', ({player, allPlayers, joined}) => {
-            if (allPlayers.length === 0) {
-                this.stop();
-            }
-            this.emitter.broadcastAll(this.namespace, 'playerChanged', {
-                players: allPlayers.map(playerToPlayerInfo)
-            });
-        });
+        this.playerManager = new PlayerManager(settings.maxPlayers);
+        this.chatHandler = new ServerChatHandler(io, this.chatRoomId, false);
+        this.lobbySettings = {...settings, chatRoomId: this.chatRoomId};
+        this.timeoutPolicy = new DefaultLobbyTimeoutPolicy({minutes: 5});
+        this.rolePolicy = new DefaultRolePolicy();
+        this.authenticationPolicy = AuthenticationPolicyFactory.getAuthenticationPolicy(settings);
     }
 
-    start(io: Server) {
-        const namespace = io.of(this.namespaceName);
-        namespace.on('connection', (socket) => {
-            this.registerSocket(namespace, socket);
-        });
+    get generalInfo(): GeneralLobbyInfo {
+        return {
+            lobbyId: this.lobbyId,
+            name: this.lobbySettings.name,
+            maxPlayers: this.lobbySettings.maxPlayers,
+            isPrivate: this.lobbySettings.isPrivate,
+            authenticationPolicyType: this.lobbySettings.authenticationPolicy.name,
+        };
+    };
+
+    get players(): Player[] {
+        return this.playerManager.getPlayers();
     }
 
+    private get chatRoomId(): string {
+        if (this.#chatRoomId === null) {
+            this.#chatRoomId = LobbyHandler.generateChatRoomId();
+        }
+        return this.#chatRoomId!;
+    }
 
-    stop() {
-        console.log(this.namespaceName + " stopping");
-        this.stopCallBacks.forEach((cb) => cb());
+    private static generateChatRoomId(): string {
+        return crypto.randomUUID();
+    }
+
+    /**
+     * gets used by the Lobby Manager to create a Player
+     * @param lobbyJoinOption
+     */
+    public join(lobbyJoinOption: LobbyJoinOption) {
+        if (this.authenticationPolicy.canJoin(lobbyJoinOption)) {
+            return this.playerManager.addPlayer(lobbyJoinOption);
+        }
+        return null;
+    }
+
+    public stop() {
+        this.chatHandler.remove();
         this.remove();
     }
 
-    joinAsHost(
-        socket: Socket,
-        username: string
-    ): {
-        username: string;
-        sessionKey: string;
-    } {
-        return this.lobby.joinAsHost(socket, username);
-    }
-
-    tryJoin(socket: Socket, username: string, password: string): PlayerAuthenticationResponse {
-        return this.lobby.tryJoin(socket, username, password);
-    }
-
-    activityCallbacks: (() => void)[] = [];
-
-    clientActivity() {
-        this.activityCallbacks.forEach((cb) => cb());
-    }
-
-    get settings(): LobbySettings {
-        return this.lobby.lobbyInfo.settings;
-    }
-
-    onActivity(cb: () => void) {
-        this.activityCallbacks.push(cb);
-    }
-
-    private stopCallBacks: (() => void)[] = [];
-
-    onStop(callback: () => void) {
-        this.stopCallBacks.push(callback);
+    public start() {
+        this.chatHandler.register();
+        this.register();
     }
 }

@@ -1,7 +1,7 @@
 <script lang="ts">
     import {io} from '../../lib/WebsocketConnection';
     import {goto} from '$app/navigation';
-    import type {CreatedClientReturn, LobbyClientInfo} from '../../../src-socket-io/lib/handler/lobby/types';
+    import type {CreatedClientReturn, GeneralLobbyInfo} from '../../../src-socket-io/lib/handler/lobby/manage/types';
     import {onMount} from 'svelte';
     import Icon from "@iconify/svelte";
 
@@ -10,18 +10,29 @@
     let password: string | null = null;
 
     function createRoom() {
+        const authenticationPolicy =
+            {
+                name: passwordAuth ? 'password' : 'none',
+            };
+
+
+        if (passwordAuth) {
+            authenticationPolicy['password'] = password;
+        }
+
+        console.log(authenticationPolicy);
+
         io.emit(
             'lobby:create',
             {
-                settings: {
-                    maxPlayers: maxPlayers,
-                    isPrivate: isPrivate,
-                    password: password
-                }
+                name: lobbyName,
+                maxPlayers: maxPlayers,
+                isPrivate: isPrivate,
+                authenticationPolicy: authenticationPolicy
             },
             (response: CreatedClientReturn) => {
                 if (response.success) {
-                    goto('/lobby/' + response.data);
+                    goto('/lobby/' + response.data.lobbyId);
                 } else {
                     alert(response.message);
                 }
@@ -29,17 +40,22 @@
         );
     }
 
-    let lobbies: LobbyClientInfo[] = [];
+    let lobbies: GeneralLobbyInfo[] = [];
 
     function getPublicLobbies() {
         io.emit('lobby:getAll', (response) => {
-            lobbies = response.data;
+            lobbies = response;
         });
     }
 
     onMount(() => {
+        io.on("error", (error) => {
+            alert(JSON.stringify(error));
+        });
         getPublicLobbies();
     });
+    let passwordAuth = false;
+    let lobbyName = '';
 </script>
 
 <div class="w-screen h-screen bg-slate-900 grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-2 2xl:grid-cols-2">
@@ -48,6 +64,15 @@
                 class="flex flex-col bg-slate-800 p-8 w-full h-full rounded border-slate-700 border text-slate-300 h-min gap-4"
         >
             <h4 class="text-4xl text-slate-200 w-96">Create Lobby</h4>
+            <div class="flex">
+                <input
+                        bind:value={lobbyName}
+                        class="font-semibold p-2 bg-slate-200 focus:ring-2 focus:ring-slate-500 flex-1 px-3 text-slate-800 focus:text-slate-900 placeholder-slate-500 rounded duration-200 ring-1 ring-slate-700 focus:outline-0"
+                        placeholder="Name"
+                        required
+                        type="text"
+                />
+            </div>
             <div class="flex flex-col gap-2">
                 <label for="maxPlayers" class="text-2xl text-slate-300">Max Players:</label>
                 <div class="flex gap-3">
@@ -68,10 +93,14 @@
                 </div>
             </div>
             <div class="flex justify-between">
-                <label for="private" class="text-2xl text-slate-300">Password? </label>
+                <label class="text-2xl text-slate-300" for="private">Private? </label>
                 <input id="private" type="checkbox" bind:checked={isPrivate}/>
             </div>
-            {#if isPrivate}
+            <div class="flex justify-between">
+                <label class="text-2xl text-slate-300" for="passwordAuth">Password? </label>
+                <input bind:checked={passwordAuth} id="passwordAuth" type="checkbox"/>
+            </div>
+            {#if passwordAuth}
                 <div class="flex">
                     <input
                             class="font-semibold p-2 bg-slate-200 focus:ring-2 focus:ring-slate-500 flex-1 px-3 text-slate-800 focus:text-slate-900 placeholder-slate-500 rounded duration-200 ring-1 ring-slate-700 focus:outline-0"

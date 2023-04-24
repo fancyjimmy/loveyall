@@ -1,29 +1,9 @@
-import {ServerHandler} from "../../socket/ServerHandler";
-import type {LobbyClientInfo, LobbyManagingEvents, LobbySettings} from "./types";
-import type {Namespace, Server, Socket} from "socket.io";
-import {LobbyHandler} from "./LobbyHandler";
-import type {TimerOptions} from "./policy/time/TimeoutPolicy";
-import {ServerChatHandler} from "../chat";
-import {ChatGameManager} from "./chatGame/ChatGameManager";
-import {TestChatGame} from "./chatGame/example/TestChatGame";
-import {Hangman} from "./chatGame/example/Hangman";
-
-
-type StringTyped = { [key: string]: any };
-
-export class Emitter<T extends StringTyped> {
-    emit<K extends keyof T & string>(socket: Socket, event: K, data: T[K]): void {
-        socket.emit(event, data);
-    }
-
-    broadcast<K extends keyof T & string>(io: Server | Namespace, room: string, event: K, data: T[K]): void {
-        io.to(room).emit(event, data);
-    }
-
-    broadcastAll<K extends keyof T & string>(io: Server | Namespace, event: K, data: T[K]): void {
-        io.emit(event, data);
-    }
-}
+import type {Server} from 'socket.io';
+import {type GeneralLobbyInfo, ZGeneralLobbyInfo, ZLobbyCreationSettings, ZLobbyJoinOption} from './types';
+import {z} from 'zod';
+import {createResponseSchema} from '../types';
+import {LobbyHandler} from '../LobbyHandler';
+import CheckedServerHandler from '../../../socket/CheckedServerHandler';
 
 /*
 Lobby Making Description
@@ -41,13 +21,10 @@ the person then can ask the LobbyManagerHandler to join the lobby
 if they can join, they will get a sessionKey to authenticate themselves with it for the lobby
 
 
-
-
-
  */
 
+/*
 
-export class LobbyManagerHandler extends ServerHandler<LobbyManagingEvents> {
 
     private readonly lobbies: Map<string, LobbyHandler> = new Map();
 
@@ -57,12 +34,12 @@ export class LobbyManagerHandler extends ServerHandler<LobbyManagingEvents> {
         return crypto.randomUUID();
     }
 
-    private createLobby(io: Server, lobbySettings: LobbySettings, timeoutTime: TimerOptions): LobbyHandler {
+    private createLobby(io: Server, lobbySettings: LobbySetting, timeoutTime: TimerOptions): LobbyHandler {
         const lobby = new LobbyHandler(io, this.generateLobbyId(), lobbySettings, timeoutTime);
         return lobby;
     }
 
-    public instantiateLobby(io: Server, lobbySettings: LobbySettings, timeoutTime: TimerOptions): LobbyHandler {
+    public instantiateLobby(io: Server, lobbySettings: LobbySetting, timeoutTime: TimerOptions): LobbyHandler {
         const lobby = this.createLobby(io, lobbySettings, timeoutTime);
         this.lobbies.set(lobby.lobbyId, lobby);
 
@@ -99,7 +76,6 @@ export class LobbyManagerHandler extends ServerHandler<LobbyManagingEvents> {
 
                 const lobby = this.instantiateLobby(io, {...settings, chatRoomId}, {minutes: 5});
                 serverChat.whenMessage((message, socket, chatuser) => {
-                    lobby.inactivityTimer.resetTimer();
                     if (message.startsWith("/disconnect")) {
                         socket.disconnect(true);
                         serverChat.broadcastMessage(`${chatuser.name} disconnected`, "Server", {server: true});
@@ -186,5 +162,89 @@ export class LobbyManagerHandler extends ServerHandler<LobbyManagingEvents> {
 
     getLobbyFromId(lobbyId: string): LobbyHandler | undefined {
         return this.lobbies.get(lobbyId);
+    }
+}
+
+ */
+
+export const ZLobbyManagingEvents = z.object({
+    create: z.tuple([ZLobbyCreationSettings, createResponseSchema(ZGeneralLobbyInfo)]),
+    join: z.tuple([ZLobbyJoinOption, createResponseSchema(z.string().nonempty())]),
+    get: z.tuple([
+        z.object({
+            lobbyId: z.string()
+        }),
+        createResponseSchema(ZGeneralLobbyInfo)
+    ]),
+    getAll: z.function().args(z.array(ZGeneralLobbyInfo)).returns(z.void())
+});
+
+export type LobbyManagingEvents = z.infer<typeof ZLobbyManagingEvents>;
+
+export default class LobbyManagerHandler extends CheckedServerHandler<typeof ZLobbyManagingEvents, any> {
+    private lobbyMap: Map<string, LobbyHandler> = new Map();
+
+    constructor(io: Server) {
+        super('lobby', io, ZLobbyManagingEvents, {
+            create: ([settings, cb], socket, io) => {
+                const id = this.createLobbyId();
+
+                const lobby = new LobbyHandler(this.io, id, settings);
+                this.lobbyMap.set(id, lobby);
+                lobby.start();
+                cb({
+                    data: lobby.generalInfo,
+                    success: true,
+                    message: 'Lobby created'
+                });
+            },
+            join: ([joinOptions, cb], socket, io) => {
+                const lobbyId = joinOptions.lobbyId;
+                const lobby = this.lobbyMap.get(lobbyId);
+                if (!lobby) {
+                    cb({message: 'Lobby not found', success: false});
+                    return;
+                }
+
+                const joined = lobby.join(joinOptions);
+
+                if (!joined) {
+                    cb({message: 'Joined not successfull', success: false});
+                    return;
+                } else {
+                    cb({message: 'Joined', success: true, data: joined.sessionKey});
+                    return;
+                }
+            },
+            get: ([{lobbyId}, callback], socket, io) => {
+                const lobby = this.lobbyMap.get(lobbyId);
+                if (!lobby) {
+                    callback({message: 'Lobby not found', success: false});
+                    return;
+                } else {
+                    callback({message: '', success: true, data: lobby.generalInfo});
+                }
+            },
+            getAll: (callback, socket, io) => {
+                callback(this.getAllPublicLobbies());
+            }
+        }, {
+            onClientError: (error, socket, io) => {
+                console.error(error);
+                socket.emit("error", error);
+            },
+        });
+    }
+
+    getAllLobbies(): GeneralLobbyInfo[] {
+        return Array.from(this.lobbyMap.values()).map((lobby) => lobby.generalInfo);
+    }
+
+    getAllPublicLobbies(): GeneralLobbyInfo[] {
+        return this.getAllLobbies().filter((lobby) => !lobby.isPrivate);
+    }
+
+    private createLobbyId(): string {
+        return crypto.randomUUID();
     }
 }

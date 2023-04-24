@@ -175,7 +175,7 @@ const nouns = [
     'Zoo'
 ];
 
-export default class ServerChatHandler extends NamespaceHandler<ChatHandler> {
+export default class ServerChatHandler extends NamespaceHandler<ChatHandler, any> {
     // socket.id -> name
     private userSockets = new Map<string, string>();
 

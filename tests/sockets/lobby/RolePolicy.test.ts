@@ -1,7 +1,7 @@
 import {beforeEach, describe, expect, it} from 'vitest';
 import {ChooseOldestRolePolicy} from '../../../src-socket-io/lib/handler/lobby/policy/role';
-import type {Player} from '../../../src-socket-io/lib/handler/lobby/types';
-import {LobbyRole} from "../../../src-socket-io/lib/handler/lobby/types";
+import type {Player} from '../../../src-socket-io/lib/handler/lobby/manage/types';
+import {LobbyRole} from "../../../src-socket-io/lib/handler/lobby/manage/types";
 import type {Socket} from 'socket.io';
 
 describe('ChooseOldestRolePolicy', () => {

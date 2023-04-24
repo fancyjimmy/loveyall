@@ -1,39 +1,28 @@
-import type {Server, Socket} from "socket.io";
-import type {TypedServerHandler} from "./types";
+import NamespaceHandler from './NamespaceHandler';
+import type {Namespace, Server, Socket} from 'socket.io';
+import type {TypedNamespaceHandler} from './types';
+import type {DefaultEventsMap, EventsMap} from "socket.io/dist/typed-events";
 
-
-type ServerListener<T> = {
-    [key: string]: {
-        [socketId: string]: (data: T, socket: Socket, io: Server) => void
+export class ServerHandler<THandler, TSocketData = any,
+    TListenEvents extends EventsMap = DefaultEventsMap,
+    TEmitEvents extends EventsMap = DefaultEventsMap,
+    TServerSideEvents extends EventsMap = DefaultEventsMap,
+> extends NamespaceHandler<THandler, TSocketData, TListenEvents, TEmitEvents, TServerSideEvents> {
+    constructor(public readonly prefix: string, io: Server, handler: TypedNamespaceHandler<THandler, TListenEvents, TEmitEvents, TServerSideEvents, TSocketData>) {
+        super('/', io, handler);
     }
-}
 
-
-export abstract class ServerHandler<T> {
-
-    private listeners: ServerListener<any> = {};
-
-    registerSocket(io: Server, socket: Socket) {
-        const specificEvents = ["disconnect", "disconnecting", "connect"];
+    registerSocket(io: Namespace, socket: Socket) {
         for (let key in this.handler) {
-            let realKey = `${this.nameSpace}:${key}`;
-            if (specificEvents.includes(key)) {
-                realKey = `${key}`;
-            }
-            // Doesn't work with Acknowledgements or multiple params.
-            // to do that data needs to be replaced with ...args, but then it's not type safe anymore
             const listener = (...data: any[]) => {
                 try {
-                    if (data.length <= 1) {
-                        return this.handler[key](data[0] ?? null, socket, io);
-                    }
+                    if (data.length <= 1) return this.handler[key](data[0] ?? null, socket, io);
                     return this.handler[key](data as any, socket, io);
                 } catch (e) {
                     console.error(e);
                 }
-            }
-
-            if (key === "connect") {
+            };
+            if (key === 'connect') {
                 try {
                     listener(null, socket, io);
                 } catch (e) {
@@ -41,22 +30,11 @@ export abstract class ServerHandler<T> {
                 }
                 continue;
             }
-            socket.on(realKey, listener);
-            if (!this.listeners[realKey]) {
-                this.listeners[realKey] = {};
+            if (key === 'disconnect') {
+                socket.on('disconnect', listener);
+            } else {
+                socket.on(this.prefix + ':' + key.toString(), listener);
             }
-
-            this.listeners[realKey][socket.id] = listener;
         }
-    }
-
-
-
-    protected handler: TypedServerHandler<T>;
-    protected nameSpace: string;
-
-    protected constructor(nameSpace: string, handler: TypedServerHandler<T>) {
-        this.handler = handler;
-        this.nameSpace = nameSpace;
     }
 }

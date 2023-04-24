@@ -143,7 +143,7 @@
                             <div class="flex gap-1">
                                 <span class="text-lime-500" use:tooltip title={log.time}>[{log.type}]</span>
                                 <p class="whitespace-nowrap">
-                                    {log.args.map((element) => JSON.stringify(element, 0, ''))}
+                                    { @html log.args.map((element) => JSON.stringify(element).replaceAll("\\n", "<br>").replaceAll('\\\"', '')).join(" ")}
                                 </p>
                             </div>
                         {/if}

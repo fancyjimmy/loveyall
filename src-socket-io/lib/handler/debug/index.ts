@@ -15,8 +15,9 @@ export class DebugHandler extends ServerHandler<Debug> {
     public listenCount = 0;
     private roomName = 'debug';
 
-    constructor() {
-        super('debug', {
+
+    constructor(io: Server) {
+        super('debug', io, {
             run: ({command, runDangerously}, socket, io) => {
                 if (runDangerously) {
                     try {
@@ -34,7 +35,7 @@ export class DebugHandler extends ServerHandler<Debug> {
                 socket.join(this.roomName);
                 if (this.listenCount === 0) {
                     logger.listen((type, time, ...args: any[]) => {
-                        this.emitConsole(io, type, time, ...args);
+                        this.emitConsole(type, time, ...args);
                     });
                 }
                 this.listenCount++;
@@ -49,8 +50,8 @@ export class DebugHandler extends ServerHandler<Debug> {
         });
     }
 
-    emitConsole(io: Server, type: string | symbol, time: Date, ...args: any[]) {
-        io.to(this.nameSpace).emit('console', type, time, ...args);
+    emitConsole(type: string | symbol, time: Date, ...args: any[]) {
+        this.io.to(this.prefix).emit('console', type, time, ...args);
     }
 
     emitError(socket: Socket, message: string) {

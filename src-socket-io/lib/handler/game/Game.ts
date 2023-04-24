@@ -1,7 +1,7 @@
 import NamespaceHandler from "../../socket/NamespaceHandler";
 import type {Server} from "socket.io";
 import type {TypedNamespaceHandler} from "../../socket/types";
-import type {Player} from "../lobby/types";
+import type {Player} from "../lobby/manage/types";
 
 export abstract class Game<Events, PlayerType> extends NamespaceHandler<Events> {
     protected constructor(namespace: string, io: Server, handler: TypedNamespaceHandler<Events>, public readonly condition: (players: Player<PlayerType>[]) => boolean) {

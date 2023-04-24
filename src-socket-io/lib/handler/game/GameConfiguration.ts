@@ -1,7 +1,7 @@
 import type {TypedNamespaceHandler} from "../../socket/types";
 import type {Namespace} from "socket.io";
 import {RoomHandler} from "./RoomHandler";
-import type {Player} from "../lobby/types";
+import type {Player} from "../lobby/manage/types";
 
 export class GameConfiguration<GameConfigEvents, PlayerExtraInfo> extends RoomHandler<GameConfigEvents> {
     constructor(roomName: string, io: Namespace, handler: TypedNamespaceHandler<GameConfigEvents>) {

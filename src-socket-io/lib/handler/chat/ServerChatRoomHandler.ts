@@ -13,8 +13,8 @@ const unreservedChars = [
 export default class ServerChatRoomHandler extends ServerHandler<ChatRoomHandler> {
     rooms = new Map<string, ServerChatHandler>();
 
-    constructor() {
-        super("chatRoom", {
+    constructor(io: Server) {
+        super("chatRoom", io, {
             create: ({name}, socket, io) => {
                 name = name.trim();
 
@@ -43,28 +43,28 @@ export default class ServerChatRoomHandler extends ServerHandler<ChatRoomHandler
                     return;
                 } else {
                     console.log("chatroom", `room ${name} created`, {extra: {socketId: socket.id}})
-                    const room = new ServerChatHandler(io, name, true);
+                    const room = new ServerChatHandler(this.io, name, true);
                     this.rooms.set(room.roomName, room);
                     room.whenUserChanges((count) => {
-                        this.broadcastRoomChange(io);
+                        this.broadcastRoomChange();
                     });
-                    this.broadcastRoomChange(io);
+                    this.broadcastRoomChange();
                     socket.emit("roomCreated", {name: room.roomName});
-                    this.listenToChatRoom(io, room);
+                    this.listenToChatRoom(room);
                 }
             },
             get: (data, socket, io) => {
                 console.log("chatroom", `room list requested`, {extra: {socketId: socket.id}, severity: -1});
-                this.broadcastRoomChange(io);
+                this.broadcastRoomChange();
                 this.emitRooms(socket);
-                socket.join(this.nameSpace);
+                socket.join(this.prefix);
             },
             leave: (data, socket, io) => {
                 console.log("chatroom", `room list not listened to anymore`, {
                     extra: {socketId: socket.id},
                     severity: -1
                 });
-                socket.leave(this.nameSpace);
+                socket.leave(this.prefix);
             }
         });
     }
@@ -78,27 +78,27 @@ export default class ServerChatRoomHandler extends ServerHandler<ChatRoomHandler
         return name.split("").map(char => char === " " ? "-" : char).filter(char => unreservedChars.includes(char)).join("");
     }
 
-    broadcastRoomChange(io: Server) {
+    broadcastRoomChange() {
         let rooms = Array.from(this.rooms.values()).map(values => {
             return {
                 name: values.roomName,
                 userCount: values.userCount
             }
         });
-        io.to(this.nameSpace).emit("rooms", rooms);
+        this.io.to(this.prefix).emit("rooms", rooms);
     }
 
     emitError(socket: Socket, error: string) {
         socket.emit("error", error);
     }
 
-    listenToChatRoom(io: Server, room: ServerChatHandler) {
+    listenToChatRoom(room: ServerChatHandler) {
         const listener = (socket: Socket) => {
-            room.registerSocket(io.of(room.namespaceName), socket);
+            room.registerSocket(this.io.of(room.namespaceName), socket);
         };
 
         // new Sockets are automatically able to join the new room
-        io.on("connection", listener);
+        this.io.on("connection", listener);
 
         // old sockets are able to join the new room
         room.register();
@@ -109,7 +109,7 @@ export default class ServerChatRoomHandler extends ServerHandler<ChatRoomHandler
             // new Sockets are not able to join the new room
             room.unregister(true);
             // old sockets are not able to join the new room
-            this.broadcastRoomChange(io);
+            this.broadcastRoomChange();
         });
     }
 

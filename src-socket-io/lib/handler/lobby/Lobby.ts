@@ -1,10 +1,11 @@
+/*
 import {
     type LobbyInfo,
     type LobbyLifeCycleEvents,
     LobbyRole,
     type Player,
     type PlayerAuthenticationResponse
-} from "./types";
+} from "./manage/types";
 import {DefaultRolePolicy, type RolePolicy} from "./policy/role";
 import type {Socket} from "socket.io";
 import {LifeCycle} from "../../utilities/LifeCycle";
@@ -67,7 +68,7 @@ export class Lobby {
         if (this.isFull()) {
             throw new Error("Lobby is full");
         }
-        if (this.lobbyInfo.settings.isPrivate && this.lobbyInfo.settings.password !== password) {
+        if (this.lobbyInfo.isPrivate && this.lobbyInfo.authenticationPolicy.password !== password) {
             throw new Error("Password is incorrect");
         }
 
@@ -202,3 +203,6 @@ export class Lobby {
         }
     }
 }
+ */
+
+export type Test = "s";

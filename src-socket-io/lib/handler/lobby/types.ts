@@ -1,129 +1,91 @@
 import type {Socket} from "socket.io";
+import {z} from "zod";
+import type {LobbyInfo} from "./manage/types";
+import {ZLobbyInfo} from "./manage/types";
 
-export type LobbySettings = {
-    maxPlayers: number,
-    chatRoomId?: string,
-    isPrivate: boolean,
-    password: string | null
-};
-
-
-export type Response<T> = {
-    message: string,
-    success: boolean,
-    data: T | null
-};
-
-export type CreatedClientReturn = Response<{
-    lobbyId: string,
-    username: string,
-    sessionKey: string
-}>;
-
-export type PlayerAuthenticationResponse = {
-    username: string,
-    sessionKey: string,
-};
-
-export type LobbyManagingEvents = {
-    create: [{
-        settings: LobbySettings
-    }, (response: Response<string>) => void],
-    join: [{
-        lobbyId: string,
-        username: string,
-        password: string
-    }, (response: Response<PlayerAuthenticationResponse>) => void],
-    get: [{
-        lobbyId: string,
-    }, (response: Response<Partial<LobbySettings>>) => void],
-    getAll: (response: Response<LobbyClientInfo[]>) => void
-};
-
-export type LobbyClientInfo = {
-    lobbyId: string,
-    maxPlayers: number,
-    playerNumber: number,
+export const createResponseSchema = <T>(dataSchema: z.ZodSchema<T>) => {
+    return z.function().args(z.object({
+        message: z.string().optional(),
+        success: z.boolean(),
+        data: dataSchema.optional()
+    })).returns(z.void());
 }
+
 export enum LobbyRole {
-    PLAYER = "player",
-    HOST = "host",
+    PLAYER = 'player',
+    HOST = 'host'
 }
 
-export type PlayerInfo<T = unknown> = {
-    username: string,
-    role: LobbyRole,
-    joinedTime: Date,
-    extra: T
+export const ZPlayerInfo = z.object({
+    username: z.string().nonempty(),
+    role: z.nativeEnum(LobbyRole),
+    joinedTime: z.date().default(() => new Date()),
+    sessionKey: z.string().nonempty(),
+});
+
+export const ZGeneralPlayerInfo = ZPlayerInfo.omit({
+    sessionKey: true
+});
+
+export type PlayerInfo<T = unknown> = z.infer<typeof ZPlayerInfo> & {
+    data?: T;
 }
 
 export type Player<T = unknown> = PlayerInfo<T> & {
-    socket: Socket,
-    sessionKey: string,
-    reconnecting?: boolean,
-}
+    reconnecting?: boolean;
+};
 
-export type LobbyInfo = {
-    lobbyId: string,
-    settings: LobbySettings
-}
 
 export type LobbyClientEvents = {
     joined: {
-        lobbyInfo: LobbyInfo,
-        role: LobbyRole,
-        players: PlayerInfo<any>[],
-    },
+        lobbyInfo: LobbyInfo;
+        role: LobbyRole;
+        players: PlayerInfo<any>[];
+    };
     playerChanged: {
-        players: PlayerInfo<any>[],
-    },
-    error: {}
-}
-
-export type LobbyError = {
-    code: number,
-    message: string,
+        players: PlayerInfo<any>[];
+    };
+    error: {
+        message: string;
+    };
 };
 
-export type LobbyServerEvents = {
-    lobbyNotFound: {
-        code: 1,
-        message: "Lobby not found",
-    },
-    lobbyFull: {
-        code: 2,
-        message: "Lobby is full",
-    },
-    wrongPassword: {
-        code: 3,
-        message: "Wrong password",
-    },
-    lobbyAlreadyExists: {
-        code: 4,
-        message: "Lobby already exists",
-    },
+export type LobbyClientEventFunctions = {
+    [K in keyof LobbyClientEvents]: (data: LobbyClientEvents[K]) => void;
 }
 
+
+export const ZJoinInfo = ZLobbyInfo.extend({
+    players: z.array(ZGeneralPlayerInfo),
+    role: z.nativeEnum(LobbyRole),
+    username: z.string()
+})
+
+
+export type LobbyError = {
+    code: number;
+    message: string;
+};
 
 export type LobbyLifeCycleEvents = {
     joined: {
-        player: Player<any>,
-    },
+        player: Player;
+    };
     hostChanged: {
-        player: Player<any>,
-    },
+        player: Player;
+    };
     playerChanged: {
-        player: Player<any>,
-        joined: boolean,
-        allPlayers: Player<any>[],
-    }
+        player: Player;
+        joined: boolean;
+        allPlayers: Player[];
+    };
     playerRemoved: {
-        player: Player<any>
-    },
+        player: Player;
+    };
     left: {
-        player: Player<any>,
-    },
+        player: Player;
+    };
     disconnected: {
-        socket: Socket,
-    }
-}
+        socket: Socket;
+    };
+};

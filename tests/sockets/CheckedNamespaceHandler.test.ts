@@ -70,7 +70,7 @@ class TestHandler extends CheckedNamespaceHandler<typeof mood> {
                     console.log('disconnect');
                     this.onDisconnect();
                 },
-                onParseError: (error, socket, io) => {
+                onClientError: (error, socket, io) => {
                     this.parserErrors.push(error);
                     socket.emit('parseError', error.message);
                     console.error(error);

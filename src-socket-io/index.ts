@@ -3,40 +3,36 @@ import type {Server as HttpServer} from 'http';
 
 
 import {ServerChatHandler, ServerChatRoomHandler} from "./lib/handler/chat";
-import {LobbyManagerHandler} from "./lib/handler/lobby/LobbyManagerHandler";
 import logger from "./lib/Logger";
 import {DebugHandler} from "./lib/handler/debug";
+import HandlerManager from "./HandlerManager";
+import LobbyManagerHandler from "./lib/handler/lobby/manage/LobbyManagerHandler";
 
-
-let g: any[] = [];
 
 console = logger.proxy(console);
 
-const serverHandlers = [
-    new ServerChatRoomHandler(),
-    new DebugHandler(),
-    new LobbyManagerHandler(),
-]
 
+let io: Server;
 
 export default function injectSocketIO(server: HttpServer) {
-    const io = new Server(server, {
+    io = new Server(server, {
         cors: {
             methods: ['GET', 'POST'],
         }
     });
 
-    const serverChatHandler = new ServerChatHandler(io, "general", false)
+    const handlerManager = new HandlerManager([
+        new ServerChatRoomHandler(io),
+        new LobbyManagerHandler(io),
+        new DebugHandler(io),
+    ]);
 
-    const chatRoomNamespace = io.of("/chat/general");
+
+    const serverChatHandler = new ServerChatHandler(io, "general", false);
     serverChatHandler.register();
 
-    io.on('connection', (socket) => {
-        serverHandlers.forEach(handler => {
-                handler.registerSocket(io, socket);
-            }
-        );
-    });
+    handlerManager.register();
+
 
     console.log('SocketIO injected');
 }

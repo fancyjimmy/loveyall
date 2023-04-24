@@ -3,18 +3,13 @@
     import {Socket} from 'socket.io-client';
     import {LOBBY_SESSION_KEY} from '$lib/constants';
     import {io} from '$lib/WebsocketConnection';
-    import type {
-        LobbySettings,
-        PlayerAuthenticationResponse,
-        PlayerInfo,
-        Response
-    } from '../../../../src-socket-io/lib/handler/lobby/types';
+    import type {LobbySettings, Response} from '../../../../src-socket-io/lib/handler/lobby/manage/types';
     import {getLobbyConnection} from '../../../lib/lobby/LobbyConnection';
     import Chat from '$lib/components/chat/Chat.svelte';
     import ServerMessage from './ServerMessage.svelte';
     import Icon from '@iconify/svelte';
     import {dev} from '$app/environment';
-    import LobbySettingsComponent from './LobbySettingsComponent.svelte';
+    import type {PlayerInfo} from "../../../../src-socket-io/lib/handler/lobby/types";
 
     export let data;
 
@@ -52,12 +47,12 @@
         username: string,
         password: string,
         lobbyId: string = data.lobbyId
-    ): Promise<PlayerAuthenticationResponse> {
-        return new Promise<PlayerAuthenticationResponse>((resolve, reject) => {
+    ): Promise<string> {
+        return new Promise<string>((resolve, reject) => {
             io.emit(
                 'lobby:join',
                 {username, password, lobbyId},
-                (response: Response<PlayerAuthenticationResponse>) => {
+                (response: Response<string>) => {
                     if (response.success) {
                         resolve(response.data);
                     } else {
@@ -68,7 +63,7 @@
         });
     }
 
-    async function join(): Promise<PlayerAuthenticationResponse> {
+    async function join(): Promise<string> {
         let passwordAuthenticated = await isPasswordAuthenticated();
 
         let name;
@@ -80,8 +75,7 @@
             password = prompt('Please enter your password');
         }
         try {
-            let authResponse = await serverAuthentication(name, password);
-            return authResponse;
+            return await serverAuthentication(name, password);
         } catch (e) {
             throw e;
         }
@@ -102,20 +96,6 @@
         });
     }
 
-    async function rejoin(socket: Socket, sessionKey: string) {
-        return new Promise((resolve, reject) => {
-            socket.emit('rejoin', (data) => {
-                resolve(data);
-            });
-
-            socket.once('error', (data) => {
-                reject(data);
-            });
-            setTimeout(() => {
-                reject('timeout');
-            }, 1000);
-        });
-    }
 
     let players: PlayerInfo[] = [];
 
@@ -144,12 +124,11 @@
     let error = null;
     onMount(async () => {
         let token = getSessionStorage('sessionKey');
-        let rejoining = token !== null;
         if (!token) {
             try {
-                let playerAuthenticationResponse = await join();
-                setSessionStorage('sessionKey', playerAuthenticationResponse.sessionKey);
-                token = playerAuthenticationResponse.sessionKey;
+                let authToken = await join();
+                setSessionStorage('sessionKey', authToken);
+                token = authToken;
             } catch (e) {
                 loadingState = 'error';
                 error = e;
@@ -159,16 +138,14 @@
 
         let socket = getLobbyConnection(data.lobbyId, token);
 
+
         try {
-            if (rejoining) {
-                await rejoin(socket, token);
-            }
             const initData = await loadData(socket);
-            players = initData.data.players;
-            username = initData.data.username;
-            role = initData.data.role;
-            lobbyId = initData.data.lobbyInfo.lobbyId;
-            lobbySettings = initData.data.lobbyInfo.settings;
+            players = initData.players;
+            username = initData.username;
+            role = initData.role;
+            lobbyId = initData.lobbyId;
+            chatRoomId = initData.chatRoomId;
 
             initSocketEvents(socket);
             loadingState = 'success';
@@ -195,6 +172,8 @@
             copied = false;
         }, 1000);
     }
+
+    let chatRoomId;
 </script>
 
 <div class="grid grid-cols-[2fr,1fr] w-screen h-screen">
@@ -238,7 +217,6 @@
                         </button>
                     </div>
                 </div>
-                <LobbySettingsComponent {lobbySettings} class="text-white text-xl p-2"/>
 
                 <h3 class="text-3xl text-white font-semibold">Players</h3>
                 <div class="flex gap-2 mt-2">
@@ -261,9 +239,9 @@
     </div>
 
     <div>
-        {#if loadingState === 'success' && lobbySettings !== null && typeof lobbySettings.chatRoomId === 'string'}
+        {#if loadingState === 'success'}
             <Chat
-                    room={lobbySettings.chatRoomId}
+                    room={chatRoomId}
                     user={username}
                     class="h-screen w-full"
                     userComponent={null}
