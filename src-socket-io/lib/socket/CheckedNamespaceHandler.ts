@@ -1,12 +1,10 @@
 import type {Namespace, Server, Socket} from 'socket.io';
 
-import zod, {ZodObject, type ZodRawShape} from 'zod';
 import type {CheckedNamespaceOption, TypedNamespaceHandler} from './types';
 import NamespaceHandler from './NamespaceHandler';
 import ClientError from '../ClientError';
 import type {DefaultEventsMap, EventsMap} from "socket.io/dist/typed-events";
-
-const Test = zod.object({name: zod.string(), other: zod.number()});
+import type {z} from "zod";
 
 function defaultClientError<T extends { error: { error: string } }>(
     error: Error,
@@ -25,22 +23,22 @@ function defaultServerError<T extends { error: { error: string } }>(
     console.error(error);
 }
 
-type CheckedZHandler<T extends ZodRawShape> = {
-    [key: string]: ZodObject<T>;
+type CheckedZHandler<T extends z.ZodRawShape> = {
+    [key: string]: z.ZodObject<T>;
 };
 
 export default class CheckedNamespaceHandler<
-    K extends ZodObject<Record<string, any>>,
+    K extends z.ZodObject<Record<string, any>>,
     TSocketData = any,
     TListenEvents extends EventsMap = DefaultEventsMap,
     TEmitEvents extends EventsMap = DefaultEventsMap,
     TServerSideEvents extends EventsMap = DefaultEventsMap,
-> extends NamespaceHandler<zod.infer<K>, TSocketData, TListenEvents, TEmitEvents, TServerSideEvents> {
+> extends NamespaceHandler<z.infer<K>, TSocketData, TListenEvents, TEmitEvents, TServerSideEvents> {
     constructor(
         namespace: string,
         io: Server<TListenEvents, TEmitEvents, TServerSideEvents, TSocketData>,
         private validator: K,
-        handler: TypedNamespaceHandler<zod.infer<typeof validator>, TListenEvents, TEmitEvents, TServerSideEvents, TSocketData>,
+        handler: TypedNamespaceHandler<z.infer<typeof validator>, TListenEvents, TEmitEvents, TServerSideEvents, TSocketData>,
         private options: CheckedNamespaceOption<TListenEvents, TEmitEvents, TServerSideEvents, TSocketData> = {
             onClientError: defaultClientError,
             onServerError: defaultServerError,
@@ -91,7 +89,7 @@ export default class CheckedNamespaceHandler<
                 try {
                     this.handler[key](parameter.data, socket, io);
                 } catch (error) {
-                    console.log("errora")
+                    console.log("error")
                     if (error instanceof ClientError) {
                         if (this.options.onClientError) {
                             this.options.onClientError(error, socket, io);

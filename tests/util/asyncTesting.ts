@@ -28,3 +28,9 @@ export async function asyncTest(name: string, fn: (done: () => void, context: Te
 
     return promise;
 }
+
+export async function sleep(ms: number): Promise<void> {
+    return new Promise((resolve) => {
+        setTimeout(resolve, ms);
+    });
+}

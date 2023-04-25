@@ -2,11 +2,21 @@ import {LobbyRole, type PlayerInfo} from '../types';
 import type {LobbyJoinOption} from '../manage/types';
 import ClientError from '../../../ClientError';
 import type {Socket} from "socket.io";
+import PlayerTimeoutPolicy from "../policy/time/player/PlayerTimeoutPolicy";
+import {Listener} from "../../../utilities/Listener";
+import * as crypto from "crypto";
 
+type PlayerExtraData = {
+    timeout: PlayerTimeoutPolicy,
+    socketId: string | null,
+}
 export default class PlayerManager {
-    private playerMap: Map<PlayerInfo, string | null> = new Map<PlayerInfo, string | null>();
+    private playerMap: Map<PlayerInfo, PlayerExtraData> = new Map<PlayerInfo, PlayerExtraData>();
+    private playerRemoveListener = new Listener<(player: PlayerInfo, players: PlayerInfo[]) => void>();
+    private playerChangeListener = new Listener<(players: PlayerInfo[]) => void>();
+    private playerAddListener = new Listener<(player: PlayerInfo, players: PlayerInfo[]) => void>();
 
-    constructor(public readonly maxPlayers: number) {
+    constructor(public readonly maxPlayers: number, private readonly milliseconds: number = 1000 * 60 * 5) {
     }
 
     private get players(): PlayerInfo[] {
@@ -18,11 +28,7 @@ export default class PlayerManager {
         if (!player) {
             return;
         }
-        this.playerMap.delete(player);
-    }
-
-    getPlayer(token: string): PlayerInfo | undefined {
-        return this.players.find((player) => player.sessionKey === token);
+        this.deletePlayer(player);
     }
 
     bindPlayerFromSocket(socket: Socket) {
@@ -30,18 +36,23 @@ export default class PlayerManager {
         if (!player) {
             throw new ClientError('Player not found');
         }
-        if (this.playerMap.get(player) !== null) {
+
+        if (this.playerMap.get(player)!.socketId !== null) {
             throw new ClientError('Already online');
         }
 
         socket.data = {
             player: player
         };
-        this.playerMap.set(player, socket.id);
+        this.playerMap.get(player)!.timeout.trigger('bind', null);
+    }
+
+    getPlayer(token: string): PlayerInfo | undefined {
+        return this.players.find((player) => player.sessionKey === token);
     }
 
     addPlayer(joinOptions: LobbyJoinOption) {
-        if (this.players.length >= this.maxPlayers - 1) {
+        if (this.players.length >= this.maxPlayers) {
             throw new ClientError('Max players reached');
         }
         const sessionKey = this.generateSessionKey();
@@ -53,21 +64,52 @@ export default class PlayerManager {
             joinedTime: new Date(),
             sessionKey
         };
-        this.playerMap.set(player, null);
 
-        console.log(this.players);
+        const playerTimeoutPolicy = new PlayerTimeoutPolicy(this.milliseconds);
+
+
+        this.playerMap.set(player, {
+            timeout: playerTimeoutPolicy,
+            socketId: null,
+        });
+
+        playerTimeoutPolicy.onTimeout(() => {
+            this.deletePlayer(player);
+        });
+
+        this.playerChangeListener.call(this.players);
+        this.playerAddListener.call(player, this.players);
         return player;
+    }
+
+    unbindPlayerFromSocket(socket: Socket<{ player: PlayerInfo }>) {
+        if ((this.playerMap.get(socket.data.player)?.socketId) === null) {
+            throw new Error('Player isn\'t connected to socket, event though it passed the connection');
+        }
+        this.playerMap.get(socket.data.player)!.socketId = null;
+        this.playerMap.get(socket.data.player)!.timeout.trigger("disconnect", null);
     }
 
     getPlayers(): PlayerInfo[] {
         return this.players;
     }
 
-    unbindPlayerFromSocket(socket: Socket<{ player: PlayerInfo }>) {
-        if ((this.playerMap.get(socket.data.player) ?? null) === null) {
-            throw new Error('Player isn\'t connected to socket, event though it passed the connection');
-        }
-        this.playerMap.set(socket.data.player, null);
+    onPlayerRemove(listener: (player: PlayerInfo, players: PlayerInfo[]) => void): number {
+        return this.playerRemoveListener.addListener(listener);
+    }
+
+    onPlayerChange(listener: (players: PlayerInfo[]) => void): number {
+        return this.playerChangeListener.addListener(listener);
+    }
+
+    onPlayerAdd(listener: (player: PlayerInfo, players: PlayerInfo[]) => void): number {
+        return this.playerAddListener.addListener(listener);
+    }
+
+    private deletePlayer(player: PlayerInfo) {
+        this.playerMap.delete(player);
+        this.playerChangeListener.call(this.players);
+        this.playerRemoveListener.call(player, this.players);
     }
 
     private generateSessionKey(): string {
