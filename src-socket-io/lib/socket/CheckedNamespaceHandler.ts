@@ -52,16 +52,37 @@ export default class CheckedNamespaceHandler<
 
     registerSocket(io: Namespace, socket: Socket): void {
 
-        if (this.options.onConnection) {
-            if (!this.options.onConnection(socket, io)) {
-                return;
+        try {
+            if (this.options.onConnection) {
+                if (!this.options.onConnection(socket, io)) {
+                    return;
+                }
             }
+        } catch (error) {
+            console.error(error);
+
+            if (this.options.onServerError && error instanceof Error) {
+                this.options.onServerError(error, socket, io);
+            }
+            return;
         }
 
+
         socket.on('disconnecting', () => {
-            if (this.options.onDisconnect) {
-                this.options.onDisconnect(socket, io);
+            try {
+                if (this.options.onDisconnect) {
+                    this.options.onDisconnect(socket, io);
+                }
+            } catch (error) {
+                console.error(error);
+
+                if (this.options.onServerError && error instanceof Error) {
+                    this.options.onServerError(error, socket, io);
+                } else if (this.options.onClientError && error instanceof ClientError) {
+                    this.options.onClientError(error, socket, io);
+                }
             }
+
         });
 
         for (const key in this.handler) {

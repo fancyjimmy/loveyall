@@ -5,6 +5,7 @@ import type {Socket} from "socket.io";
 import PlayerTimeoutPolicy from "../policy/time/player/PlayerTimeoutPolicy";
 import {Listener} from "../../../utilities/Listener";
 import * as crypto from "crypto";
+import type {RolePolicy} from "../policy/role";
 
 type PlayerExtraData = {
     timeout: PlayerTimeoutPolicy,
@@ -16,7 +17,20 @@ export default class PlayerManager {
     private playerChangeListener = new Listener<(players: PlayerInfo[]) => void>();
     private playerAddListener = new Listener<(player: PlayerInfo, players: PlayerInfo[]) => void>();
 
-    constructor(public readonly maxPlayers: number, private readonly milliseconds: number = 1000 * 60 * 5) {
+    constructor(public readonly maxPlayers: number, public readonly rolePolicy: RolePolicy, private readonly milliseconds: number = 1000 * 60 * 5) {
+        this.playerRemoveListener.addListener((player, players) => {
+            this.rolePolicy.setNextHost(players, player);
+
+            console.log(player);
+        });
+        this.playerChangeListener.addListener((players) => {
+            console.log(players.length);
+        });
+
+        this.playerAddListener.addListener((player, players) => {
+            console.log(player);
+        });
+
     }
 
     private get players(): PlayerInfo[] {
@@ -37,6 +51,9 @@ export default class PlayerManager {
             throw new ClientError('Player not found');
         }
 
+        console.log('bind  ' + player.username);
+
+
         if (this.playerMap.get(player)!.socketId !== null) {
             throw new ClientError('Already online');
         }
@@ -44,6 +61,8 @@ export default class PlayerManager {
         socket.data = {
             player: player
         };
+
+        this.playerMap.get(player)!.socketId = socket.id;
         this.playerMap.get(player)!.timeout.trigger('bind', null);
     }
 
@@ -58,8 +77,9 @@ export default class PlayerManager {
         const sessionKey = this.generateSessionKey();
 
         const role = this.players.length === 0 ? LobbyRole.HOST : LobbyRole.PLAYER;
+        const username = this.getUniqueUsername(joinOptions.username);
         const player: PlayerInfo = {
-            username: joinOptions.username,
+            username: username,
             role: role,
             joinedTime: new Date(),
             sessionKey
@@ -84,10 +104,22 @@ export default class PlayerManager {
 
     unbindPlayerFromSocket(socket: Socket<{ player: PlayerInfo }>) {
         if ((this.playerMap.get(socket.data.player)?.socketId) === null) {
-            throw new Error('Player isn\'t connected to socket, event though it passed the connection');
+            throw new ClientError('Player isn\'t connected to socket, event though it passed the connection');
         }
+
         this.playerMap.get(socket.data.player)!.socketId = null;
         this.playerMap.get(socket.data.player)!.timeout.trigger("disconnect", null);
+        socket.data = {};
+    }
+
+    private getUniqueUsername(username: string): string {
+        let count = 1;
+        let newUsername = username;
+        const players = this.players;
+        while (players.map(player => player.username).includes(newUsername)) {
+            newUsername = `${username}#${count++}`;
+        }
+        return newUsername;
     }
 
     getPlayers(): PlayerInfo[] {

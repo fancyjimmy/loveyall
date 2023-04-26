@@ -81,7 +81,7 @@
 		<span class="text-4xl aspect-square">
 			{hovered.length <= 3 ? hovered : ''}
 		</span>
-        <span class="font-bold flex-1 text-xl text-white">
+        <span class="font-bold flex-1 text-xl text-white truncate">
 			{#if hovered.length <= 2 && hovered.length !== 0}
 				:{emojis.find((emoji) => emoji.char === hovered)?.name ?? ''}:
 			{/if}

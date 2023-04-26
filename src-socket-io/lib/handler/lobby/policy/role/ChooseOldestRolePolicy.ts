@@ -2,7 +2,7 @@ import type RolePolicy from './RolePolicy';
 import {LobbyRole, type Player, type PlayerInfo} from "../../types";
 
 export default class ChooseOldestRolePolicy implements RolePolicy {
-    nextHost(players: Player[], leavingPlayer: PlayerInfo): Player | null {
+    setNextHost(players: Player[], leavingPlayer: PlayerInfo): Player | null {
         if (leavingPlayer.role !== LobbyRole.HOST) return null;
         if (players.length === 0) return null;
 
@@ -13,6 +13,8 @@ export default class ChooseOldestRolePolicy implements RolePolicy {
                 nextHost = player;
             }
         }
+
+        nextHost.role = LobbyRole.HOST;
         return nextHost;
     }
 }

@@ -4,8 +4,6 @@ export type ConsoleListener = (type: string | symbol, time: Date, ...args: any[]
 export class Logger {
     private listeners: ConsoleListener[] = [];
     public showLogs = true;
-
-
     proxy(console: Console) {
         let listeners = this.listeners
         let self = this;

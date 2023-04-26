@@ -1,6 +1,6 @@
-import type {Player, PlayerInfo} from "../../types";
+import type {PlayerInfo} from "../../types";
 
 export default interface RolePolicy {
-    nextHost: (players: Player[], leavingPlayer: PlayerInfo) => Player | null;
+    setNextHost: (players: PlayerInfo[], leavingPlayer: PlayerInfo) => PlayerInfo | null;
 }
 

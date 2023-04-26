@@ -22,8 +22,10 @@ export default class PlayerTimeoutPolicy extends TimeoutPolicy<PlayerTimeoutEven
 
     trigger<TKey extends keyof PlayerTimeoutEvents>(type: TKey, data: PlayerTimeoutEvents[TKey]): void {
         if (type === 'disconnect') {
+            console.log("Start timer");
             this.timer.start()
         } else if (type === 'bind') {
+            console.log("Stop timer");
             this.timer.stop();
         }
     }

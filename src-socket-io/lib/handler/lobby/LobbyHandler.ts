@@ -124,11 +124,11 @@ export class LobbyHandler extends CheckedNamespaceHandler<
             }
         );
 
-        this.playerManager = new PlayerManager(settings.maxPlayers);
+        this.rolePolicy = new DefaultRolePolicy();
+        this.playerManager = new PlayerManager(settings.maxPlayers, this.rolePolicy, 10 * 1000);
         this.chatHandler = new ServerChatHandler(io, this.chatRoomId, false);
         this.lobbySettings = {...settings, chatRoomId: this.chatRoomId};
         this.timeoutPolicy = new DefaultLobbyTimeoutPolicy({minutes: 5});
-        this.rolePolicy = new DefaultRolePolicy();
         this.authenticationPolicy = AuthenticationPolicyFactory.getAuthenticationPolicy(settings);
     }
 

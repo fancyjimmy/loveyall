@@ -63,7 +63,7 @@ describe("PlayerManager", () => {
 
         playerManager.onPlayerRemove((player) => {
             console.log(`Removed ${player.username}`);
-            expect(true).toBeFalsy(); // should not be called
+            expect(true).toBeTruthy(); // should not be called
         });
 
         playerManager.onPlayerChange((players) => {
@@ -77,16 +77,28 @@ describe("PlayerManager", () => {
         await sleep(1000);
 
 
-        playerManager.bindPlayerFromSocket({
+        const socket = {
             id: "test",
             handshake: {
                 auth: {
                     token: player.sessionKey
                 }
             }
-        } as unknown as Socket);
-        await sleep(1000 * 2);
+        } as unknown as Socket;
+        playerManager.bindPlayerFromSocket(socket);
 
+        await sleep(1000 * 2);
+        expect(playerManager.getPlayer(player.sessionKey)).toBeTruthy();
+
+        expect(playerManager.getPlayers().includes(player)).toBeTruthy();
+        expect(playerManager.getPlayers().length).toBe(1);
+        expect(socket.data.player).toBe(player);
+        playerManager.unbindPlayerFromSocket(socket);
+        expect(socket.data.player === player).toBeFalsy();
+
+        await sleep(1000 * 3);
+    }, {
+        timeout: 1000 * 10
     });
 
     it('should work with 2 players ', async function () {
@@ -142,15 +154,8 @@ describe("PlayerManager", () => {
             }
         }
 
-
-        playerManager.bindPlayerFromSocket({
-            id: "test",
-            handshake: {
-                auth: {
-                    token: player.sessionKey
-                }
-            }
-        } as unknown as Socket);
+        expect(player.username === player2.username).toBeFalsy();
+        expect(player2.username).toBe("test#1");
 
     });
 

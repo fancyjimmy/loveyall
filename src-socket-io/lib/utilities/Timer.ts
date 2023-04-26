@@ -6,7 +6,6 @@ export default class Timer {
     private timer: NodeJS.Timeout | undefined;
 
     constructor(private millis: number) {
-
     }
 
     get running() {
@@ -21,6 +20,7 @@ export default class Timer {
         if (this.timer) return false;
         this.timer = setTimeout(() => {
             this.end();
+            console.log("Timer end");
         }, this.millis);
 
         this.isRunning = true;
@@ -33,12 +33,14 @@ export default class Timer {
     }
 
     private clear() {
-        this.isRunning = false;
-        if (this.timer) clearTimeout(this.timer);
+        if (this.timer) {
+            clearTimeout(this.timer);
+            this.timer = undefined;
+        }
     }
 
     private end() {
         this.endListener.call();
-        this.isRunning = true;
+        this.isRunning = false;
     }
 }
