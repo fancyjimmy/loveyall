@@ -1,7 +1,7 @@
 import {ChatGame} from "../ChatGame";
 import type {ServerChatHandler} from "../../../chat";
 
-export class TestChatGame extends ChatGame {
+export default class TestChatGame extends ChatGame {
     constructor(chatHandler: ServerChatHandler) {
         super(chatHandler);
     }

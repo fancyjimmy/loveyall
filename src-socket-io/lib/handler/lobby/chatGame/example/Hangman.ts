@@ -906,7 +906,7 @@ class HangmanWord {
     }
 }
 
-export class Hangman extends ChatGame {
+export default class Hangman extends ChatGame {
     constructor(chatHandler: ServerChatHandler, private maxTurns: number = 5) {
         super(chatHandler);
     }

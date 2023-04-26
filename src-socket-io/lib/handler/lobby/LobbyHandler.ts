@@ -26,6 +26,8 @@ import ClientError from '../../ClientError';
 import {ServerChatHandler} from '../chat';
 import * as crypto from 'crypto';
 import PlayerManager from "./playerManager/PlayerManager";
+import {ChatGameManager} from "./chatGame/ChatGameManager";
+import Hangman from "./chatGame/example/Hangman";
 
 export function playerInfoToGeneralPlayerInfo(player: PlayerInfo): Omit<PlayerInfo, 'sessionKey'> {
     return {
@@ -54,7 +56,7 @@ export class LobbyHandler extends CheckedNamespaceHandler<
     public readonly chatHandler: ServerChatHandler;
     private timeoutPolicy: LobbyTimeoutPolicy;
     private authenticationPolicy: AuthenticationPolicy;
-    private rolePolicy: RolePolicy;
+    private readonly rolePolicy: RolePolicy;
     #chatRoomId: string | null = null;
     private playerManager: PlayerManager;
 
@@ -130,6 +132,8 @@ export class LobbyHandler extends CheckedNamespaceHandler<
         this.lobbySettings = {...settings, chatRoomId: this.chatRoomId};
         this.timeoutPolicy = new DefaultLobbyTimeoutPolicy({minutes: 5});
         this.authenticationPolicy = AuthenticationPolicyFactory.getAuthenticationPolicy(settings);
+
+        this.mountChatManager();
     }
 
     get generalInfo(): GeneralLobbyInfo {
@@ -151,6 +155,23 @@ export class LobbyHandler extends CheckedNamespaceHandler<
             this.#chatRoomId = LobbyHandler.generateChatRoomId();
         }
         return this.#chatRoomId!;
+    }
+
+    private mountChatManager() {
+        this.chatHandler.whenMessage((message, socket, chatuser) => {
+            if (message.startsWith("/disconnect")) {
+                socket.disconnect(true);
+                this.chatHandler.broadcastMessage(`${chatuser.name} disconnected`, "Server", {server: true});
+            }
+        });
+        const chatGameManager = new ChatGameManager(this.chatHandler);
+
+        chatGameManager.addChatGame((message, user, info) => {
+            if (message.startsWith("/hangman")) {
+                return true;
+            }
+            return false;
+        }, new Hangman(this.chatHandler), false);
     }
 
     private static generateChatRoomId(): string {
