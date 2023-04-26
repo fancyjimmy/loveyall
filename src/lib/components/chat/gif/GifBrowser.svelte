@@ -25,11 +25,6 @@
         return acc;
     }, {} as Record<number, any[]>);
 
-    let filteredGifs = Array.from({length: cols}).reduce((acc, _, i) => {
-        acc[i] = [];
-        return acc;
-    }, {} as Record<number, any[]>);
-
     function splitArray(arr: any[], n: number) {
         let len = arr.length,
             out = [],
@@ -49,75 +44,19 @@
         }
     }
 
-    function fetchFilteredInto(gifRes: any[]) {
-        let parts = splitArray(gifRes, cols);
-
-        for (let i = 0; i < parts.length; i++) {
-            filteredGifs[i] = [...filteredGifs[i], ...filteredGifs[i]];
-        }
-    }
+    let intersectionObserver;
 
     let fetched = 0;
-    let filteredFetch = 0;
 
     let alreadyObserved = 0;
 
-    function fetchFiltered(search: string, offset: number) {
-        let limit = 16;
-        return gf.search(search, {offset: offset * limit, limit});
-    }
-
     onMount(async () => {
         // Instantiate
-
-        useUnFiltered();
-
-        // To remove
-        return () => {
-        };
-    });
-    let observed = {};
-    let root;
-
-    export let show = false;
-
-    async function useFiltered(text: string) {
-        filtered = true;
-        filteredFetch = 0;
-        let value = text;
-        let gifResult: GifsResult = await fetchFiltered(text, 0);
-
-        fetchFilteredInto(gifResult.data);
-
-        const intersctionObserver = new IntersectionObserver(
-            async () => {
-                const newGifs = await fetchFiltered(value, ++fetched);
-                fetchFilteredInto(newGifs.data);
-                alreadyObserved = 0;
-            },
-            {
-                root: root,
-                rootMargin: '0px',
-                threshold: 0.5
-            }
-        );
-
-        for (let i = 0; i < cols; i++) {
-            let part = observed[i];
-            intersctionObserver.observe(part);
-        }
-
-        fetchFilteredInto((await fetchFiltered(value, 0)).data);
-    }
-
-    let filtered = false;
-
-    async function useUnFiltered() {
         let gifResult: GifsResult = await fetchGifs(fetched);
 
         fetchInto(gifResult.data);
 
-        const intersctionObserver = new IntersectionObserver(
+        intersectionObserver = new IntersectionObserver(
             async () => {
                 const newGifs = await fetchGifs(++fetched);
                 fetchInto(newGifs.data);
@@ -130,11 +69,27 @@
             }
         );
 
+        // To remove
+        return () => {
+        };
+    });
+    let observed = {
+        0: null,
+        1: null,
+    };
+    let root;
+
+    export let show = false;
+
+    $: if (show) {
         for (let i = 0; i < cols; i++) {
             let part = observed[i];
-            intersctionObserver.observe(part);
+
+            if (!part) continue;
+            intersectionObserver.observe(part);
         }
     }
+    ;
 
     let filter;
 </script>
@@ -156,8 +111,8 @@
         />
 
         <div
-                class="overflow-y-scroll scrollbar-hidden grid gap-3 flex-1"
-                style="grid-template-columns: repeat({cols}, 1fr) "
+                class="overflow-y-scroll scrollbar-hidden grid gap-3 flex-1 dynamic-grid"
+                style="--cols: {cols} "
         >
             {#each Object.keys(gifs) as key, i}
                 <div class="flex flex-col gap-3">
@@ -174,8 +129,8 @@
                             />
                         </div>
                     {/each}
-                    <div bind:this={observed[key]} class="bg-slate-600 h-40 rounded"/>
-                    {#each Array.from([0, 0]) as _, i}
+                    <div bind:this={observed[i]} class="bg-slate-600 h-40 rounded"/>
+                    {#each Array.from({length: cols}) as _, i}
                         <div class="bg-slate-600 h-40 rounded"/>
                     {/each}
                 </div>
@@ -183,3 +138,12 @@
         </div>
     </div>
 {/if}
+
+
+<style>
+    .dynamic-grid {
+        --cols: 2;
+
+        grid-template-columns: repeat(var(--cols), 1fr);
+    }
+</style>

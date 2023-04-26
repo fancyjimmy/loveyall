@@ -102,6 +102,14 @@ export default class PlayerManager {
         return player;
     }
 
+    tryKickPlayer(host: PlayerInfo, other: PlayerInfo) {
+        if (host.role !== LobbyRole.HOST) {
+            throw new ClientError('Only host can kick');
+        }
+
+        this.deletePlayer(other);
+    }
+
     unbindPlayerFromSocket(socket: Socket<{ player: PlayerInfo }>) {
         if ((this.playerMap.get(socket.data.player)?.socketId) === null) {
             throw new ClientError('Player isn\'t connected to socket, event though it passed the connection');

@@ -176,17 +176,22 @@
     let chatRoomId;
 </script>
 
-<div class="grid grid-cols-[2fr,1fr] w-screen h-screen">
+<div class="w-screen h-screen">
     <div>
         {#if loadingState === 'loading'}
-            <p>Loading</p>
+            <div class="w-full h-full flex items-center justify-center bg-slate-900">
+                <div>
+                    <p>Loading</p>
+                </div>
+            </div>
         {:else if loadingState === 'error'}
             <p>Lobby not Found</p>
             <p>{JSON.stringify(error)}</p>
             <p><a href="/lobby">Create</a></p>
         {:else}
-            <div class="w-full h-full bg-slate-800 p-3 relative">
-                <div class="text-5xl font-semibold inline-flex text-white justify-between w-full">
+            <div class="w-full h-screen bg-slate-800 relative flex ">
+                <div class="flex-[2]">
+                    <div class="text-5xl font-semibold inline-flex text-white justify-between w-full">
 					<span class="inline-flex items-center gap-3">
 						{username}
                         {#if role === 'host'}
@@ -195,33 +200,32 @@
 							</span>
 						{/if}
 					</span>
-                    <div class="flex items-center">
-                        {#if dev}
-                            <!-- TODO Remove when prod -->
-                            <a
-                                    class="text-4xl p-2 hover:bg-slate text-lime-600 duration-200"
-                                    href={link}
-                                    target="_blank"
-                            >
-                                <Icon icon="material-symbols:add"/>
-                            </a>
-                        {/if}
+                        <div class="flex items-center">
+                            {#if dev}
+                                <!-- TODO Remove when prod -->
+                                <a
+                                        class="text-4xl p-2 hover:bg-slate text-lime-600 duration-200"
+                                        href={link}
+                                        target="_blank"
+                                >
+                                    <Icon icon="material-symbols:add"/>
+                                </a>
+                            {/if}
 
-                        <button
-                                class="text-4xl p-2 hover:bg-slate {copied
+                            <button
+                                    class="text-4xl p-2 hover:bg-slate {copied
 								? 'text-sky-500'
 								: 'text-white'} duration-200"
-                                on:click={copyLink}
-                        >
-                            <Icon icon="material-symbols:content-copy"/>
-                        </button>
+                                    on:click={copyLink}
+                            >
+                                <Icon icon="material-symbols:content-copy"/>
+                            </button>
+                        </div>
                     </div>
-                </div>
-
-                <h3 class="text-3xl text-white font-semibold">Players</h3>
-                <div class="flex gap-2 mt-2">
-                    {#each players.filter((player) => player.username !== username) as player}
-                        <div class="bg-slate-400 rounded p-3">
+                    <h3 class="text-3xl text-white font-semibold">Players</h3>
+                    <div class="flex gap-2 mt-2">
+                        {#each players.filter((player) => player.username !== username) as player}
+                            <div class="bg-slate-400 rounded p-3">
 							<span class="text-xl inline-flex items-center gap-1">
 								{player.username}
                                 {#if player.role === 'host'}
@@ -230,29 +234,26 @@
 									</span>
 								{/if}
 							</span>
-                            <p>{player.joinedTime}</p>
-                        </div>
-                    {/each}
+                                <p>{player.joinedTime}</p>
+                            </div>
+                        {/each}
+                    </div>
                 </div>
-            </div>
-        {/if}
-    </div>
 
-    <div>
-        {#if loadingState === 'success'}
-            <Chat
-                    room={chatRoomId}
-                    user={username}
-                    class="h-screen w-full"
-                    userComponent={null}
-                    messageFormatter={(message) => {
+                <Chat
+                        room={chatRoomId}
+                        user={username}
+                        class="flex-1 min-w-[25em]"
+                        userComponent={null}
+                        messageFormatter={(message) => {
 					if (message.extra?.server === true) {
 						return ServerMessage;
 					}
 				}}
-            >
-                <p slot="icon">Chat</p>
-            </Chat>
+                >
+                    <p slot="icon">Chat</p>
+                </Chat>
+            </div>
         {/if}
     </div>
 </div>
