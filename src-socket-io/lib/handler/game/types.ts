@@ -1,4 +1,9 @@
-import type {Player} from "../lobby/manage/types";
+import type { Socket } from 'socket.io';
+import type { PlayerInfo } from '../lobby/types';
 
-export type GameCondition = (players: Player[]) => boolean;
+export type GameRequirements = {
+	minPlayers: number;
+	maxPlayers: number | null;
+};
 
+export type SocketWithPlayer = Socket<any, any, any, PlayerInfo>;

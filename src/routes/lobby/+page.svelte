@@ -131,13 +131,14 @@
             {#each lobbies as lobby}
                 <div class="p-3 bg-lime-400 rounded relative">
                     <p class="font-semibold">
-                        Lobby <span>{lobby.lobbyId}</span>
+                        <span>{lobby.name}</span>
                     </p>
                     <p>
-                        {lobby.playerNumber} / {lobby.maxPlayers}
+                        {lobby.playerCount} / {lobby.maxPlayers}
                     </p>
 
                     <a href="/lobby/{lobby.lobbyId}"
+                       data-sveltekit-preload-data="off"
                        class="absolute right-2 top-0 bottom-0 my-auto text-4xl flex items-center duration-200 hover:text-lime-800 text-black hover:scale-110">
                         <Icon icon="material-symbols:meeting-room"></Icon>
                     </a>

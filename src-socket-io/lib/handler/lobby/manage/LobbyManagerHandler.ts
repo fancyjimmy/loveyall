@@ -209,10 +209,10 @@ export default class LobbyManagerHandler extends CheckedServerHandler<typeof ZLo
                 const joined = lobby.join(joinOptions);
 
                 if (!joined) {
-                    cb({message: 'Joined not successfull', success: false});
+                    cb({ message: 'Could not join', success: false });
                     return;
                 } else {
-                    cb({message: 'Joined', success: true, data: joined.sessionKey});
+                    cb({ success: true, data: joined.sessionKey });
                     return;
                 }
             },
@@ -231,7 +231,7 @@ export default class LobbyManagerHandler extends CheckedServerHandler<typeof ZLo
         }, {
             onClientError: (error, socket, io) => {
                 console.error(error);
-                socket.emit("error", error);
+								socket.emit('error', { message: error.message });
             },
         });
     }

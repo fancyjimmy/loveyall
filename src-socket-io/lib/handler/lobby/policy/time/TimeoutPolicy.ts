@@ -1,25 +1,40 @@
-import {Listener} from "../../../../utilities/Listener";
+import { Listener } from '../../../../utilities/Listener';
 
 export default abstract class TimeoutPolicy<TEvent extends Record<string, any>> {
-    private timeoutListener: Listener<() => void> = new Listener<() => void>();
+	private timeoutListener: Listener<() => void> = new Listener<() => void>();
 
-    abstract trigger<TKey extends keyof TEvent>(type: TKey, data: TEvent[TKey]): void;
+	private triggerListeners: Record<string, Listener<(data: any) => void>> = {};
 
-    onTimeout(callback: () => void): number {
-        return this.timeoutListener.addListener(callback);
-    }
+	trigger<TKey extends keyof TEvent & string>(type: TKey, data: TEvent[TKey]): void {
+		if (!this.triggerListeners[type]) {
+			this.triggerListeners[type] = new Listener<(data: TEvent[TKey]) => void>();
+		}
+		this.triggerListeners[type].call(data);
+	}
 
-    clearOnTimeout(): void {
-        this.timeoutListener.clear();
-    }
+	onTimeout(callback: () => void): number {
+		return this.timeoutListener.addListener(callback);
+	}
 
-    removeOnTimeout(key: number): void {
-        this.timeoutListener.removeListener(key);
-    }
+	clearOnTimeout(): void {
+		this.timeoutListener.clear();
+	}
 
-    protected abstract onTrigger<TKey extends keyof TEvent>(type: TKey, callback: (data: TEvent[TKey]) => void): void;
+	removeOnTimeout(key: number): void {
+		this.timeoutListener.removeListener(key);
+	}
 
-    protected timeout() {
-        this.timeoutListener.call();
-    };
+	onTrigger<TKey extends keyof TEvent & string>(
+		type: TKey,
+		callback: (data: TEvent[TKey]) => void
+	): void {
+		if (!this.triggerListeners[type]) {
+			this.triggerListeners[type] = new Listener<(data: TEvent[TKey]) => void>();
+		}
+		this.triggerListeners[type].addListener(callback);
+	}
+
+	protected timeout() {
+		this.timeoutListener.call();
+	}
 }

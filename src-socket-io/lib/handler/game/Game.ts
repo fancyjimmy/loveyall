@@ -1,26 +1,22 @@
-import NamespaceHandler from "../../socket/NamespaceHandler";
-import type {Server} from "socket.io";
-import type {TypedNamespaceHandler} from "../../socket/types";
-import type {Player} from "../lobby/manage/types";
+import type { GameRequirements } from './types';
+import CheckedNamespaceHandler from '../../socket/CheckedNamespaceHandler';
+import type { PlayerInfo } from '../lobby/types';
+import type { z } from 'zod';
+import type { LobbyHandler } from '../lobby/LobbyHandler';
+import type { CheckedNamespaceOption, TypedNamespaceHandler } from '../../socket/types';
 
-export abstract class Game<Events, PlayerType> extends NamespaceHandler<Events> {
-    protected constructor(namespace: string, io: Server, handler: TypedNamespaceHandler<Events>, public readonly condition: (players: Player<PlayerType>[]) => boolean) {
-        super(namespace, io, handler);
-    }
-
-    abstract start(): void;
-
-    canStart(players: Player<PlayerType>[]): boolean {
-        return this.condition(players);
-    }
-
-    stop() {
-        this.#stopCallbacks.forEach(callback => callback());
-    };
-
-    #stopCallbacks: (() => void)[] = [];
-
-    whenStopped(callback: () => void): void {
-        this.#stopCallbacks.push(callback);
-    }
+export default abstract class Game<
+	THandler extends z.ZodObject<Record<string, any>>,
+	TGameOptions,
+	TGameRequirements extends GameRequirements
+> extends CheckedNamespaceHandler<THandler, { player: PlayerInfo }> {
+	protected constructor(
+		public lobbyHandler: LobbyHandler,
+		validator: THandler,
+		handler: TypedNamespaceHandler<z.infer<typeof validator>>,
+		options: CheckedNamespaceOption,
+		public readonly requirements: TGameRequirements
+	) {
+		super(lobbyHandler.namespaceName, lobbyHandler.io, validator, handler, options);
+	}
 }

@@ -1,37 +1,38 @@
-import {z} from 'zod';
+import { z } from 'zod';
 
 export enum AuthenticationPolicyType {
-    NONE = 'none',
-    PASSWORD = 'password'
+	NONE = 'none',
+	PASSWORD = 'password'
 }
 
 export const ZAuthenticationPolicy = z.discriminatedUnion('name', [
-    z.object({name: z.literal(AuthenticationPolicyType.NONE)}),
-    z.object({
-        name: z.literal(AuthenticationPolicyType.PASSWORD),
-        password: z.string().nonempty({message: 'Password must be set'})
-    })
+	z.object({ name: z.literal(AuthenticationPolicyType.NONE) }),
+	z.object({
+		name: z.literal(AuthenticationPolicyType.PASSWORD),
+		password: z.string().nonempty({ message: 'Password must be set' })
+	})
 ]);
 
 export const ZLobbySettings = z.object({
-    name: z.string().nonempty({message: 'Name must be set'}),
-    maxPlayers: z.number().min(2, {message: 'Max Players has to be above 2'}).default(5),
-    chatRoomId: z.string().optional(),
-    isPrivate: z.boolean().default(false),
-    authenticationPolicy: ZAuthenticationPolicy.default({name: AuthenticationPolicyType.NONE})
+	name: z.string().nonempty({ message: 'Name must be set' }),
+	maxPlayers: z.number().min(2, { message: 'Max Players has to be above 2' }).default(5),
+	chatRoomId: z.string().optional(),
+	isPrivate: z.boolean().default(false),
+	authenticationPolicy: ZAuthenticationPolicy.default({ name: AuthenticationPolicyType.NONE })
 });
 
-export const ZLobbyCreationSettings = ZLobbySettings.omit({chatRoomId: true});
+export const ZLobbyCreationSettings = ZLobbySettings.omit({ chatRoomId: true });
 export const ZGeneralLobbyInfo = ZLobbySettings.omit({
-    chatRoomId: true,
-    authenticationPolicy: true
+	chatRoomId: true,
+	authenticationPolicy: true
 }).extend({
-    authenticationPolicyType: z.nativeEnum(AuthenticationPolicyType),
-    lobbyId: z.string().nonempty({message: 'Lobby Id must be set'})
+	playerCount: z.number().min(0),
+	authenticationPolicyType: z.nativeEnum(AuthenticationPolicyType),
+	lobbyId: z.string().nonempty({ message: 'Lobby Id must be set' })
 });
 
 export const ZLobbyInfo = ZLobbySettings.extend({
-    lobbyId: z.string().nonempty({message: 'Lobby Id must be set'})
+	lobbyId: z.string().nonempty({ message: 'Lobby Id must be set' })
 });
 
 export type LobbyInfo = z.infer<typeof ZLobbyInfo>;
@@ -51,9 +52,9 @@ export type LobbySettings = z.infer<typeof ZLobbySettings>;
 export type GeneralLobbyInfo = z.infer<typeof ZGeneralLobbyInfo>;
 
 export const ZLobbyJoinOption = z.object({
-    lobbyId: z.string(),
-    username: z.string(),
-    password: z.string().nullable().optional()
+	lobbyId: z.string(),
+	username: z.string(),
+	password: z.string().nullable().optional()
 });
 
 export type LobbyJoinOption = z.infer<typeof ZLobbyJoinOption>;
@@ -66,9 +67,7 @@ export type PlayerAuthenticationResponse = {
 };
 
 export type Response<T> = {
-    message?: string;
-    success: boolean;
-    data?: T;
+	message?: string;
+	success: boolean;
+	data?: T;
 };
-
-

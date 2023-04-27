@@ -1,3 +1,3 @@
-export type Class<T extends abstract new (...args: any) => any> = {
-    new(...args: ConstructorParameters<T>): T;
+export interface Class<T, A extends any[]> extends Function {
+	new (...args: A): T;
 }

@@ -9,7 +9,7 @@
     import ChatUsers from './ChatUsers.svelte';
     import EmojiBrowser from '$lib/components/chat/emoji/EmojiBrowser.svelte';
     import EmojiSuggestion from '$lib/components/chat/emoji/EmojiSuggestion.svelte';
-    import GifBrowser from "$lib/components/chat/gif/GifBrowser.svelte";
+    import GifBrowser from '$lib/components/chat/gif/GifBrowser.svelte';
 
     export let room = '';
     export let user = '';
@@ -93,12 +93,12 @@
                 return a;
             };
             if (message.startsWith('/lorem')) {
-                let rest = message.slice('lorem'.length);
+                let rest = message.slice('/lorem'.length);
                 let count = parseInt(rest);
                 if (isNaN(count)) count = 5;
                 message = lorem(count);
             } else if (message.startsWith('/spam')) {
-                let a = message.slice('spam'.length);
+                let a = message.slice('/spam'.length);
                 let b = parseInt(a);
                 message = lorem(Math.floor(Math.random() * 15) + 5);
                 for (let i = 0; i < b; i++) {
@@ -223,14 +223,16 @@
                     class="{emojiBrowser ? '' : 'hidden'} duration-200"
             />
 
-            <GifBrowser bind:show={gifBrowser}
-                        on:blurred={() => {
-                            gifBrowser = false;
-                        }}
-                        on:selected={(event) => {
-                sendMessage(event.detail.images.original.url);
-            }}
-                        class="absolute bottom-28 right-5 h-96 w-96 bg-slate-700 rounded-lg border-2 border-slate-800  p-2 scrollbar-hidden"/>
+            <GifBrowser
+                    bind:show={gifBrowser}
+                    on:blurred={() => {
+					gifBrowser = false;
+				}}
+                    on:selected={(event) => {
+					sendMessage(event.detail.images.original.url);
+				}}
+                    class="absolute bottom-28 right-5 h-96 w-96 bg-slate-700 rounded-lg border-2 border-slate-800  p-2 scrollbar-hidden"
+            />
 
             <div
                     class="relative group flex gap-3 m-2 text-slate-100 group-focus:ring-2 group-focus:ring-slate-500 px-3 rounded bg-slate-800 duration-200 ring-1 ring-slate-700"
@@ -285,7 +287,7 @@
 							toggleGif();
 						}}
                     >
-                        <Icon icon="material-symbols:gif-box-outline"></Icon>
+                        <Icon icon="material-symbols:gif-box-outline"/>
                     </button>
                     <button
                             class="hover:scale-110 filter-gray duration-200 py-3 text-sky-500 text-2xl grid justify-center rounded grayscale hover:grayscale-0"
