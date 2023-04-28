@@ -25,7 +25,6 @@ export default class PlayerManager {
 		private readonly milliseconds: number = 1000 * 60 * 5
 	) {
 		this.playerRemoveListener.addListener((player, players) => {
-			this.rolePolicy.setNextHost(players, player);
 			console.log(player);
 		});
 		this.playerChangeListener.addListener((players) => {
@@ -156,13 +155,22 @@ export default class PlayerManager {
 		return newUsername;
 	}
 
-	private deletePlayer(player: PlayerInfo) {
-		this.playerMap.delete(player);
-		this.playerChangeListener.call(this.players);
-		this.playerRemoveListener.call(player, this.players);
+	getSocket(player: PlayerInfo) {
+		return this.playerMap.get(player)?.socketId ?? null;
 	}
 
 	private generateSessionKey(): string {
 		return crypto.randomUUID();
+	}
+
+	getHost() {
+		return this.players.find((player) => player.role === LobbyRole.HOST) as PlayerInfo;
+	}
+
+	private deletePlayer(player: PlayerInfo) {
+		this.playerMap.delete(player);
+		this.rolePolicy.setNextHost(this.players, player);
+		this.playerChangeListener.call(this.players);
+		this.playerRemoveListener.call(player, this.players);
 	}
 }

@@ -1,5 +1,5 @@
 import CheckedNamespaceHandler from '../../socket/CheckedNamespaceHandler';
-import type { Server } from 'socket.io';
+import type { Server, Socket } from 'socket.io';
 import {
 	createResponseSchema,
 	type LobbyClientEventFunctions,
@@ -27,6 +27,9 @@ import * as crypto from 'crypto';
 import PlayerManager from './playerManager/PlayerManager';
 import { ChatGameManager } from './chatGame/ChatGameManager';
 import Hangman from './chatGame/example/Hangman';
+import type GameInitializer from '../game/GameInitializer';
+import GameManager from '../game/GameManager';
+import SharedPixelInitializer from '../game/example/sharedPixelCanvas/SharedPixelInitializer';
 
 export function playerInfoToGeneralPlayerInfo(player: PlayerInfo): Omit<PlayerInfo, 'sessionKey'> {
 	return {
@@ -40,6 +43,7 @@ export type JoinInfo = z.infer<typeof ZJoinInfo>;
 export const ZLobbyEvents = z.object({
 	joined: z.function().args(ZJoinInfo).returns(z.void()),
 	changeSettings: z.tuple([ZLobbyCreationSettings.partial(), createResponseSchema(z.void())]),
+	start: z.tuple([z.string(), createResponseSchema(z.void())]),
 	leave: z.function().args(z.void()).returns(z.void()),
 	get: z.function().args(createResponseSchema(ZGeneralPlayerInfo)).returns(z.void()),
 	ping: z.function().args(z.void()).returns(z.void()),
@@ -59,6 +63,8 @@ export class LobbyHandler extends CheckedNamespaceHandler<
 	private readonly rolePolicy: RolePolicy;
 	#chatRoomId: string | null = null;
 	private playerManager: PlayerManager;
+	private game: GameInitializer<any> | null = null;
+	private gameManager: GameManager = new GameManager();
 
 	constructor(io: Server, private lobbyId: string, settings: LobbyCreationSettings) {
 		super(
@@ -88,6 +94,17 @@ export class LobbyHandler extends CheckedNamespaceHandler<
 				get: (data, socket, io) => {},
 				ping: (cb, socket, io) => {
 					cb();
+				},
+				start: ([game, cb], socket, io) => {
+					console.log(game);
+					const initializer = this.gameManager.getGameInitializer(game);
+					if (initializer) {
+						this.chooseGame(initializer).then((_) => {
+							cb({ success: true });
+						});
+					} else {
+						cb({ message: 'Game not found', success: false });
+					}
 				},
 				kick: async ([name, cb], socket, io) => {
 					try {
@@ -143,6 +160,7 @@ export class LobbyHandler extends CheckedNamespaceHandler<
 		this.timeoutPolicy = new DefaultLobbyTimeoutPolicy({ minutes: 5 });
 		this.authenticationPolicy = AuthenticationPolicyFactory.getAuthenticationPolicy(settings);
 
+		this.gameManager.addGame(new SharedPixelInitializer(this));
 		this.mountChatManager();
 		this.startPlayerChangeEvents();
 	}
@@ -202,6 +220,12 @@ export class LobbyHandler extends CheckedNamespaceHandler<
 		});
 	}
 
+	socketFrom(player: PlayerInfo): Socket | null {
+		const socketId = this.playerManager.getSocket(player);
+		if (socketId === null) return null;
+		return this.namespace.sockets.get(socketId) ?? null;
+	}
+
 	private mountChatManager() {
 		this.chatHandler.whenMessage((message, socket, chatuser) => {
 			if (message.startsWith('/disconnect')) {
@@ -223,5 +247,32 @@ export class LobbyHandler extends CheckedNamespaceHandler<
 			new Hangman(this.chatHandler),
 			false
 		);
+	}
+
+	private async chooseGame(gameInitializer: GameInitializer<any>) {
+		this.game = gameInitializer;
+		this.namespace.emit('game-chosen', {
+			url: this.game.name
+		});
+
+		try {
+			const config = await this.game.loadGameConfig(
+				this.playerManager.getPlayers(),
+				this.playerManager.getHost()
+			);
+
+			const game = await this.game.startGame(this, this.players, config);
+		} catch (e) {
+			if (e instanceof ClientError) {
+				this.namespace.emit('error', {
+					message: e.message
+				});
+			} else if (e instanceof Error) {
+				console.error(e);
+				this.namespace.emit('error', {
+					message: e.message
+				});
+			}
+		}
 	}
 }

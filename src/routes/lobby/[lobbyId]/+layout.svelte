@@ -15,6 +15,10 @@
     import {dev} from '$app/environment';
     import type {GeneralPlayerInfo, PlayerInfo} from '../../../../src-socket-io/lib/handler/lobby/types';
     import type {JoinInfo} from '../../../../src-socket-io/lib/handler/lobby/LobbyHandler';
+    import PlayerListComponent from "./PlayerListComponent.svelte";
+    import SelfPlayerComponent from "./SelfPlayerComponent.svelte";
+    import LobbyForm from "$lib/components/lobby/LobbyForm.svelte";
+    import Dialog from "$lib/components/lobby/Dialog.svelte";
 
     export let data;
 
@@ -107,18 +111,22 @@
     async function setPlayerData(playerInfos: PlayerInfo[]) {
         players = playerInfos;
 
-        for (let i = 0; i < players.length; i++) {
-            if (players[i].username === username) {
-                role = players[i].role;
-                break;
+        playerInfos.forEach((player) => {
+            if (player.username === self.username) {
+                self = {
+                    username: player.username,
+                    role: player.role
+                };
             }
-        }
+        });
+
     }
 
     function initSocketEvents(socket: Socket) {
         socket.on('playerChanged', (change) => {
             setPlayerData(change.players);
         });
+
 
         socket.on('disconnect', () => {
             loadingState = 'error';
@@ -155,8 +163,10 @@
             const initData: JoinInfo = await loadData(socket);
             lobbyName = initData.name;
             players = initData.players;
-            self.username = initData.username;
-            self.role = initData.role;
+            self = {
+                username: initData.username,
+                role: initData.role
+            };
             lobbyId = initData.lobbyId;
             chatRoomId = initData.chatRoomId;
             maxPlayers = initData.maxPlayers;
@@ -169,7 +179,6 @@
         }
     });
 
-    let role = '';
     let lobbyId = '';
     let lobbySettings: LobbySettings | null = null;
     let lobbyName;
@@ -196,6 +205,11 @@
     }
 
     let chatRoomId;
+    let dialog;
+
+    function openDialog() {
+        dialog.open();
+    }
 </script>
 
 <div class="w-screen h-screen">
@@ -203,7 +217,7 @@
         {#if loadingState === 'loading'}
             <div class="w-full h-full flex items-center justify-center bg-slate-900">
                 <div>
-                    <p class="text-white text-4xl">Loading</p>
+                    <p class="text-white text-4xl">Loading...</p>
                 </div>
             </div>
         {:else if loadingState === 'error'}
@@ -218,50 +232,10 @@
                 <div class="flex-[3] flex flex-col">
                     <div class="flex-1 grid grid-cols-[15em,1fr]">
                         <div class="bg-slate-900 p-2">
-                            <div class="bg-slate-600 rounded p-2 shadow">
-                                <div class="rounded text-slate-100 pl-1">
-                                    <div
-                                            class="text-lg font-bold flex items-center justify-between gap-1"
-                                    >
-                                        {self.username}
-                                        {#if self.role === 'host'}
-											<span class="text-yellow-400">
-												<Icon icon="ic:round-star"/>
-											</span>
-                                        {/if}
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="mt-2">
-                                <h3 class="text-slate-400 text-xs font-bold">PLAYERS - {players.length - 1}</h3>
-                                <div class="flex flex-col w-full">
-                                    {#each players.filter((player) => player.username !== self.username) as player}
-                                        <div class="rounded text-slate-100 pl-1">
-                                            <div class="text-lg font-bold flex items-center justify-between gap-1">
-                                                <p class="truncate">
-                                                    {player.username}
-                                                </p>
-                                                {#if player.role === 'host'}
-                                                    <div class="text-yellow-400 block">
-                                                        <Icon icon="ic:round-star"/>
-                                                    </div>
-                                                {/if}
+                            <SelfPlayerComponent {self}/>
 
-                                                {#if self.role === 'host'}
-                                                    <button
-                                                            class="text-slate-600 hover:text-red-500 duration-200"
-                                                            on:click={() => {
-														kick(player);
-													}}
-                                                    >
-                                                        <Icon icon="mdi:trash-can"/>
-                                                    </button>
-                                                {/if}
-                                            </div>
-                                        </div>
-                                    {/each}
-                                </div>
-                            </div>
+                            <PlayerListComponent players={players} {self}
+                                                 on:kick={(event) => {kick(event.detail)}}/>
                         </div>
 
                         <div class="flex flex-col">
@@ -292,7 +266,6 @@
                             </div>
 
                             <div class="flex-1">
-
                                 <slot/>
                             </div>
 
@@ -317,3 +290,8 @@
         {/if}
     </div>
 </div>
+
+<Dialog bind:this={dialog} element={LobbyForm} on:resolve={(event) => {
+    console.log(event.detail);
+    dialog.close();
+}}/>

@@ -17,8 +17,8 @@ export const createResponseSchema = <T>(dataSchema: z.ZodSchema<T>) => {
 };
 
 export enum LobbyRole {
-    PLAYER = 'player',
-    HOST = 'host'
+	PLAYER = 'player',
+	HOST = 'host'
 }
 
 export const ZPlayerInfo = z.object({
@@ -57,41 +57,39 @@ export type LobbyClientEvents = {
 };
 
 export type LobbyClientEventFunctions = {
-    [K in keyof LobbyClientEvents]: (data: LobbyClientEvents[K]) => void;
-}
-
+	[K in keyof LobbyClientEvents]: (data: LobbyClientEvents[K]) => void;
+};
 
 export const ZJoinInfo = ZLobbyInfo.extend({
-    players: z.array(ZGeneralPlayerInfo),
-    role: z.nativeEnum(LobbyRole),
-    username: z.string()
-})
-
+	players: z.array(ZGeneralPlayerInfo),
+	role: z.nativeEnum(LobbyRole),
+	username: z.string()
+});
 
 export type LobbyError = {
-    code: number;
-    message: string;
+	code: number;
+	message: string;
 };
 
 export type LobbyLifeCycleEvents = {
-    joined: {
-        player: Player;
-    };
-    hostChanged: {
-        player: Player;
-    };
-    playerChanged: {
-        player: Player;
-        joined: boolean;
-        allPlayers: Player[];
-    };
-    playerRemoved: {
-        player: Player;
-    };
-    left: {
-        player: Player;
-    };
-    disconnected: {
-        socket: Socket;
-    };
+	joined: {
+		player: Player;
+	};
+	hostChanged: {
+		player: Player;
+	};
+	playerChanged: {
+		player: Player;
+		joined: boolean;
+		allPlayers: Player[];
+	};
+	playerRemoved: {
+		player: Player;
+	};
+	left: {
+		player: Player;
+	};
+	disconnected: {
+		socket: Socket;
+	};
 };

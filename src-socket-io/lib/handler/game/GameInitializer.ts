@@ -1,35 +1,36 @@
-import type Game from './Game';
-import type { GameRequirements, SocketWithPlayer } from './types';
+import type { GameRequirements } from './types';
 import type { Class } from '../../../types';
 import type { LobbyHandler } from '../lobby/LobbyHandler';
+import type { PlayerInfo } from '../lobby/types';
+import type Game from './Game';
 
 export default abstract class GameInitializer<
-	TGameOptions,
-	TGameRequirements extends GameRequirements,
-	TGame extends Game<any, TGameOptions, TGameRequirements>
+	TGame extends Game,
+	TGameOptions extends any = any,
+	TGameRequirements extends GameRequirements = GameRequirements
 > {
 	public readonly requirements: TGameRequirements;
 	public readonly description: string = '';
 	public readonly name: string = '';
-	private gameClass: Class<TGame, [LobbyHandler, SocketWithPlayer[], TGameOptions]>;
+	protected gameClass: Class<TGame, [LobbyHandler, PlayerInfo[], TGameOptions]>;
 
 	protected constructor(
-		gameClass: Class<TGame, [LobbyHandler, SocketWithPlayer[], TGameOptions]>,
+		protected lobbyHandler: LobbyHandler,
+		gameClass: Class<TGame, [LobbyHandler, PlayerInfo[], TGameOptions]>,
 		requirements: TGameRequirements
 	) {
 		this.requirements = requirements;
 		this.gameClass = gameClass;
 	}
 
-	public abstract loadGameConfig(
-		sockets: SocketWithPlayer[],
-		host: SocketWithPlayer
-	): Promise<TGameOptions>;
+	public abstract loadGameConfig(players: PlayerInfo[], host: PlayerInfo): Promise<TGameOptions>;
 
 	// returns started Game
-	public abstract startGame(
-		lobbyHandler: LobbyHandler,
-		sockets: SocketWithPlayer[],
-		config: TGameOptions
-	): Promise<TGame>;
+	public startGame(lobbyHandler: LobbyHandler, players: PlayerInfo[], config: TGameOptions): TGame {
+		const Game = this.gameClass.bind({}, lobbyHandler, players, config);
+		const game = new Game();
+		game.register();
+
+		return game;
+	}
 }

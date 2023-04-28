@@ -4,7 +4,6 @@ import { io } from 'socket.io-client';
 const sockets: { [lobbyId: string]: Socket } = {};
 
 export function getLobbyConnection(lobbyId: string, sessionKey: string): Socket {
-	console.log(sockets);
 	if (sockets[lobbyId] === undefined) {
 		sockets[lobbyId] = io(`/lobby/${lobbyId}`, {
 			auth: {

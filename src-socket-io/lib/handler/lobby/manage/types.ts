@@ -62,8 +62,8 @@ export type LobbyJoinOption = z.infer<typeof ZLobbyJoinOption>;
 export type CreatedClientReturn = Response<GeneralLobbyInfo>;
 
 export type PlayerAuthenticationResponse = {
-    username: string;
-    sessionKey: string;
+	username: string;
+	sessionKey: string;
 };
 
 export type Response<T> = {

@@ -3,6 +3,9 @@
     import {LOBBY_SESSION_KEY} from "../../../lib/constants";
     import {onMount} from "svelte";
     import {getLobbyConnection} from "../../../lib/lobby/LobbyConnection";
+    import {goto} from "$app/navigation";
+    import type {Response} from '../../../../src-socket-io/lib/handler/lobby/manage/types';
+
 
     export let data;
 
@@ -11,20 +14,32 @@
     }
 
     let token;
+
+    let socket;
     let player;
+
     onMount(() => {
         token = getSessionStorage('sessionKey');
-        let socket = getLobbyConnection(data.lobbyId, token);
+        socket = getLobbyConnection(data.lobbyId, token);
 
-        socket.on("playerChanged", (p) => {
-            player = p;
+        socket.on("game-chosen", (game: any) => {
+            goto(`/lobby/${data.lobbyId}/${game.url}`);
         });
-
     });
 
+    function open(game) {
+        socket.emit("start", game, (response: Response<void>) => {
+            if (response.success) {
+                goto(`/lobby/${data.lobbyId}/${game}`);
+            }
+        });
+    }
 </script>
-<p>Hello world {token}</p>
 
-<a href="\lobby\{data.lobbyId}\test">test</a>
+<div class="bg-white w-full h-full flex flex-col">
+    <p>Main</p>
+    <button on:click={() => {open("pixel")}}>Pixel</button>
 
-<p>{JSON.stringify(player)}</p>
+    <div class="flex-1 flex items-center justify-center">
+    </div>
+</div>

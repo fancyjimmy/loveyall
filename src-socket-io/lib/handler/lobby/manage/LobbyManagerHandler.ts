@@ -168,83 +168,89 @@ if they can join, they will get a sessionKey to authenticate themselves with it 
  */
 
 export const ZLobbyManagingEvents = z.object({
-    create: z.tuple([ZLobbyCreationSettings, createResponseSchema(ZGeneralLobbyInfo)]),
-    join: z.tuple([ZLobbyJoinOption, createResponseSchema(z.string().nonempty())]),
-    get: z.tuple([
-        z.object({
-            lobbyId: z.string()
-        }),
-        createResponseSchema(ZGeneralLobbyInfo)
-    ]),
-    getAll: z.function().args(z.array(ZGeneralLobbyInfo)).returns(z.void())
+	create: z.tuple([ZLobbyCreationSettings, createResponseSchema(ZGeneralLobbyInfo)]),
+	join: z.tuple([ZLobbyJoinOption, createResponseSchema(z.string().nonempty())]),
+	get: z.tuple([
+		z.object({
+			lobbyId: z.string()
+		}),
+		createResponseSchema(ZGeneralLobbyInfo)
+	]),
+	getAll: z.function().args(z.array(ZGeneralLobbyInfo)).returns(z.void())
 });
 
 export type LobbyManagingEvents = z.infer<typeof ZLobbyManagingEvents>;
 
 export default class LobbyManagerHandler extends CheckedServerHandler<typeof ZLobbyManagingEvents, any> {
-    private lobbyMap: Map<string, LobbyHandler> = new Map();
+	private lobbyMap: Map<string, LobbyHandler> = new Map();
 
-    constructor(io: Server) {
-        super('lobby', io, ZLobbyManagingEvents, {
-            create: ([settings, cb], socket, io) => {
-                const id = this.createLobbyId();
+	constructor(io: Server) {
+		super(
+			'lobby',
+			io,
+			ZLobbyManagingEvents,
+			{
+				create: ([settings, cb], socket, io) => {
+					const id = this.createLobbyId();
 
-                const lobby = new LobbyHandler(this.io, id, settings);
-                this.lobbyMap.set(id, lobby);
-                lobby.start();
-                cb({
-                    data: lobby.generalInfo,
-                    success: true,
-                    message: 'Lobby created'
-                });
-            },
-            join: ([joinOptions, cb], socket, io) => {
-                const lobbyId = joinOptions.lobbyId;
-                const lobby = this.lobbyMap.get(lobbyId);
-                if (!lobby) {
-                    cb({message: 'Lobby not found', success: false});
-                    return;
-                }
+					const lobby = new LobbyHandler(this.io, id, settings);
+					this.lobbyMap.set(id, lobby);
+					lobby.start();
+					cb({
+						data: lobby.generalInfo,
+						success: true,
+						message: 'Lobby created'
+					});
+				},
+				join: ([joinOptions, cb], socket, io) => {
+					const lobbyId = joinOptions.lobbyId;
+					const lobby = this.lobbyMap.get(lobbyId);
+					if (!lobby) {
+						cb({ message: 'Lobby not found', success: false });
+						return;
+					}
 
-                const joined = lobby.join(joinOptions);
+					const joined = lobby.join(joinOptions);
 
-                if (!joined) {
-                    cb({ message: 'Could not join', success: false });
-                    return;
-                } else {
-                    cb({ success: true, data: joined.sessionKey });
-                    return;
-                }
-            },
-            get: ([{lobbyId}, callback], socket, io) => {
-                const lobby = this.lobbyMap.get(lobbyId);
-                if (!lobby) {
-                    callback({message: 'Lobby not found', success: false});
-                    return;
-                } else {
-                    callback({message: '', success: true, data: lobby.generalInfo});
-                }
-            },
-            getAll: (callback, socket, io) => {
-                callback(this.getAllPublicLobbies());
-            }
-        }, {
-            onClientError: (error, socket, io) => {
-                console.error(error);
-								socket.emit('error', { message: error.message });
-            },
-        });
-    }
+					if (!joined) {
+						cb({ message: 'Could not join', success: false });
+						return;
+					} else {
+						cb({ success: true, data: joined.sessionKey });
+						return;
+					}
+				},
+				get: ([{ lobbyId }, callback], socket, io) => {
+					const lobby = this.lobbyMap.get(lobbyId);
+					if (!lobby) {
+						callback({ message: 'Lobby not found', success: false });
+						return;
+					} else {
+						callback({ message: '', success: true, data: lobby.generalInfo });
+					}
+				},
+				getAll: (callback, socket, io) => {
+					callback(this.getAllPublicLobbies());
+				}
+			},
+			{
+				onClientError: (error, socket, io) => {
+					console.error(error);
+					socket.emit('error', { message: error.message });
+				}
+			}
+		);
+	}
 
-    getAllLobbies(): GeneralLobbyInfo[] {
-        return Array.from(this.lobbyMap.values()).map((lobby) => lobby.generalInfo);
-    }
+	getAllLobbies(): GeneralLobbyInfo[] {
+		return Array.from(this.lobbyMap.values()).map((lobby) => lobby.generalInfo);
+	}
 
-    getAllPublicLobbies(): GeneralLobbyInfo[] {
-        return this.getAllLobbies().filter((lobby) => !lobby.isPrivate);
-    }
+	getAllPublicLobbies(): GeneralLobbyInfo[] {
+		return this.getAllLobbies().filter((lobby) => !lobby.isPrivate);
+	}
 
-    private createLobbyId(): string {
-        return crypto.randomUUID();
-    }
+	private createLobbyId(): string {
+		return crypto.randomUUID();
+	}
 }
