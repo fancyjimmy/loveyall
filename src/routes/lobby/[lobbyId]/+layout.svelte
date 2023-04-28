@@ -1,14 +1,9 @@
 <script lang="ts">
-    import {onMount} from 'svelte';
+    import {onMount, SvelteComponent} from 'svelte';
     import {Socket} from 'socket.io-client';
-    import {LOBBY_SESSION_KEY} from '$lib/constants';
     import {io} from '$lib/WebsocketConnection';
-    import type {
-        GeneralLobbyInfo,
-        LobbySettings,
-        Response
-    } from '../../../../src-socket-io/lib/handler/lobby/manage/types';
-    import {getLobbyConnection} from '../../../lib/lobby/LobbyConnection';
+    import type {GeneralLobbyInfo, Response} from '../../../../src-socket-io/lib/handler/lobby/manage/types';
+    import {getLobbyConnection, getSessionStorage, setSessionStorage} from '../../../lib/lobby/LobbyConnection';
     import Chat from '$lib/components/chat/Chat.svelte';
     import ServerMessage from './ServerMessage.svelte';
     import Icon from '@iconify/svelte';
@@ -16,21 +11,14 @@
     import type {GeneralPlayerInfo, PlayerInfo} from '../../../../src-socket-io/lib/handler/lobby/types';
     import type {JoinInfo} from '../../../../src-socket-io/lib/handler/lobby/LobbyHandler';
     import PlayerListComponent from "./PlayerListComponent.svelte";
-    import SelfPlayerComponent from "./SelfPlayerComponent.svelte";
-    import LobbyForm from "$lib/components/lobby/LobbyForm.svelte";
     import Dialog from "$lib/components/lobby/Dialog.svelte";
+    import LoadingScreen from "./LoadingScreen.svelte";
+    import ErrorScreen from "./ErrorScreen.svelte";
 
     export let data;
 
     let loadingState: 'loading' | 'error' | 'success' = 'loading';
 
-    function setSessionStorage(key: string, value: string) {
-        sessionStorage.setItem(`${LOBBY_SESSION_KEY}${data.lobbyId}${key}`, value);
-    }
-
-    function getSessionStorage(key: string): string | null {
-        return sessionStorage.getItem(`${LOBBY_SESSION_KEY}${data.lobbyId}${key}`);
-    }
 
     async function isPasswordAuthenticated() {
         return new Promise((resolve, reject) => {
@@ -180,7 +168,6 @@
     });
 
     let lobbyId = '';
-    let lobbySettings: LobbySettings | null = null;
     let lobbyName;
     let username = '';
 
@@ -206,41 +193,38 @@
 
     let chatRoomId;
     let dialog;
+    let dialogComponent: SvelteComponent;
+    let dialogArgs: any = {};
 
-    function openDialog() {
-        dialog.open();
+    let onResolve: (...args: any) => void;
+
+    async function openDialog(element: SvelteComponent, args: any, resolveCallback: (...args: any) => void): Promise<any[]> {
+        return new Promise<any[]>((resolve, reject) => {
+            dialogComponent = element;
+            dialogArgs = args;
+            onResolve = (...args: any[]) => {
+                resolveCallback(...args);
+                resolve(args);
+            };
+            dialog.open();
+        });
     }
 </script>
 
 <div class="w-screen h-screen">
     <div class="w-full h-full">
         {#if loadingState === 'loading'}
-            <div class="w-full h-full flex items-center justify-center bg-slate-900">
-                <div>
-                    <p class="text-white text-4xl">Loading...</p>
-                </div>
-            </div>
+            <LoadingScreen/>
         {:else if loadingState === 'error'}
-            <div class="w-full h-full flex items-center justify-center bg-slate-900">
-                <div class="bg-red-500 border-2 border-red-800 p-4 rounded text-white">
-                    <p class="font-semibold text-3xl mb-3">{JSON.stringify(error)}</p>
-                    <p class="text"><a href="/lobby">Look for another Lobby 👀</a></p>
-                </div>
-            </div>
+            <ErrorScreen {error}></ErrorScreen>
         {:else}
             <div class="w-full h-full bg-slate-800 relative flex">
                 <div class="flex-[3] flex flex-col">
-                    <div class="flex-1 grid grid-cols-[15em,1fr]">
-                        <div class="bg-slate-900 p-2">
-                            <SelfPlayerComponent {self}/>
-
-                            <PlayerListComponent players={players} {self}
-                                                 on:kick={(event) => {kick(event.detail)}}/>
-                        </div>
-
+                    <div class="flex-1 grid grid-cols-1 relative">
                         <div class="flex flex-col">
-                            <div class="text-2xl p-2 text-white font-bold flex justify-between items-center w-full bg-slate-700">
-                                <h2>LOBBY {lobbyName} {players.length}/{maxPlayers}</h2>
+                            <div class="text-2xl p-2 text-white font-bold flex justify-between items-center w-full">
+                                <h2>{lobbyName} <span class="text-xs text-slate-400">{players.length}
+                                    /{maxPlayers}</span></h2>
 
                                 <div class="flex items-center">
                                     {#if dev}
@@ -273,25 +257,34 @@
                     </div>
                 </div>
 
-                <Chat
-                        room={chatRoomId}
-                        user={self.username}
-                        class="flex-1 min-w-[20em]"
-                        userComponent={null}
-                        messageFormatter={(message) => {
+                <div class="flex-1 flex flex-col">
+                    <div class="bg-slate-800 p-2 top-2 left-2 w-full h-48 overflow-y-auto scrollbar-hidden">
+
+                        <PlayerListComponent players={players} {self}
+                                             on:kick={(event) => {kick(event.detail)}}/>
+                    </div>
+
+                    <Chat
+                            room={chatRoomId}
+                            user={self.username}
+                            class="flex-1 min-w-[25em]"
+                            userComponent={null}
+                            messageFormatter={(message) => {
 						if (message.extra?.server === true) {
 							return ServerMessage;
 						}
 					}}
-                >
-                    <p slot="icon"/>
-                </Chat>
+                    >
+                        <p slot="icon"/>
+                    </Chat>
+                </div>
+
             </div>
         {/if}
     </div>
 </div>
 
-<Dialog bind:this={dialog} element={LobbyForm} on:resolve={(event) => {
-    console.log(event.detail);
+<Dialog args={dialogArgs} bind:this={dialog} element={dialogComponent} on:resolve={(event) => {
+    onResolve(event.detail);
     dialog.close();
 }}/>

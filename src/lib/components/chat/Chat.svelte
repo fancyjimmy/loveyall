@@ -192,13 +192,14 @@
                     <slot name="icon">
                         <Icon icon="ic:round-meeting-room"/>
                         {room}
+                        <p
+                                class="rounded-full bg-sky-500 px-3 text-white grid items-center justify-center font-bold"
+                        >
+                            {name}
+                        </p>
                     </slot>
                 </h3>
-                <p
-                        class="rounded-full bg-sky-500 px-3 text-white grid items-center justify-center font-bold"
-                >
-                    {name}
-                </p>
+
             </div>
             <div
                     class="flex flex-1 flex-col gap-2 px-6 w-full items-start pb-2 overflow-y-auto scrollbar-hidden"

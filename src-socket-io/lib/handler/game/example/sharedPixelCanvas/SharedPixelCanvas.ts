@@ -1,5 +1,5 @@
 import type { z } from 'zod';
-import type { LobbyHandler } from '../../../lobby/LobbyHandler';
+import type LobbyHandler from '../../../lobby/LobbyHandler';
 import { type Color, ZSharedPixelCanvasEvents, ZSharedPixelCanvasSettings } from './types';
 import type { PlayerInfo } from '../../../lobby/types';
 import Player from '../../Player';

@@ -1,6 +1,6 @@
 import type { GameRequirements } from './types';
 import type { Class } from '../../../types';
-import type { LobbyHandler } from '../lobby/LobbyHandler';
+import type LobbyHandler from '../lobby/LobbyHandler';
 import type { PlayerInfo } from '../lobby/types';
 import type Game from './Game';
 

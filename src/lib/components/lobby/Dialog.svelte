@@ -15,6 +15,7 @@
         dialog.showModal();
     }
 
+    export let args: any = {};
     let dialog: HTMLDialogElement;
 
     function resolve(...args: any[]) {
@@ -25,7 +26,7 @@
 
 {#if element}
     <dialog bind:this={dialog}>
-        <svelte:component this={element} on:close={() => {close()}} {resolve}/>
+        <svelte:component this={element} on:close={() => {close()}} {resolve} {...args}/>
     </dialog>
 {/if}
 

@@ -1,10 +1,10 @@
 import GameInitializer from '../../GameInitializer';
 import type { SharedPixelCanvasSettings } from './types';
 import SharedPixelCanvas from './SharedPixelCanvas';
-import type { LobbyHandler } from '../../../lobby/LobbyHandler';
+import type LobbyHandler from '../../../lobby/LobbyHandler';
 import type { PlayerInfo } from '../../../lobby/types';
 
-export default class SharedPixelInitializer extends GameInitializer<
+export default class SharedPixelCanvasInitializer extends GameInitializer<
 	SharedPixelCanvas,
 	SharedPixelCanvasSettings,
 	{ minPlayers: 1; maxPlayers: null }

@@ -29,7 +29,7 @@ import { ChatGameManager } from './chatGame/ChatGameManager';
 import Hangman from './chatGame/example/Hangman';
 import type GameInitializer from '../game/GameInitializer';
 import GameManager from '../game/GameManager';
-import SharedPixelInitializer from '../game/example/sharedPixelCanvas/SharedPixelInitializer';
+import SharedPixelCanvasInitializer from '../game/example/sharedPixelCanvas/SharedPixelCanvasInitializer';
 
 export function playerInfoToGeneralPlayerInfo(player: PlayerInfo): Omit<PlayerInfo, 'sessionKey'> {
 	return {
@@ -50,7 +50,7 @@ export const ZLobbyEvents = z.object({
 	kick: z.tuple([z.string(), createResponseSchema(z.void())])
 });
 
-export class LobbyHandler extends CheckedNamespaceHandler<
+export default class LobbyHandler extends CheckedNamespaceHandler<
 	typeof ZLobbyEvents,
 	{ player: PlayerInfo },
 	DefaultEventsMap,
@@ -72,7 +72,7 @@ export class LobbyHandler extends CheckedNamespaceHandler<
 			io,
 			ZLobbyEvents,
 			{
-				joined: (callback, socket, io) => {
+				joined: (callback, socket) => {
 					callback({
 						username: socket.data!.player!.username,
 						role: socket.data!.player!.role,
@@ -85,18 +85,18 @@ export class LobbyHandler extends CheckedNamespaceHandler<
 						authenticationPolicy: this.lobbySettings.authenticationPolicy
 					});
 				},
-				changeSettings: (data, socket, io) => {},
-				leave: (callback, socket, io) => {
+				changeSettings: (data, io) => {},
+				leave: (callback, socket) => {
 					this.playerManager.removePlayer(socket);
 					callback();
 					socket.disconnect();
 				},
 				get: (data, socket, io) => {},
-				ping: (cb, socket, io) => {
+				ping: (cb) => {
 					cb();
 				},
-				start: ([game, cb], socket, io) => {
-					console.log(game);
+				start: ([game, cb]) => {
+					// TODO Refactor and think about how to handle changes
 					const initializer = this.gameManager.getGameInitializer(game);
 					if (initializer) {
 						this.chooseGame(initializer).then((_) => {
@@ -124,14 +124,14 @@ export class LobbyHandler extends CheckedNamespaceHandler<
 				}
 			},
 			{
-				onClientError: (error, socket, io) => {
+				onClientError: (error, socket) => {
 					socket.emit('error', { message: error.message });
 				},
 				onServerError: (error, socket, io) => {
 					socket.emit('error', { message: 'Unknown Error' });
 					console.error(error);
 				},
-				onConnection: (socket, io) => {
+				onConnection: (socket) => {
 					// throws a client Error if the player is not authenticated
 					try {
 						this.playerManager.bindPlayerFromSocket(socket);
@@ -160,7 +160,7 @@ export class LobbyHandler extends CheckedNamespaceHandler<
 		this.timeoutPolicy = new DefaultLobbyTimeoutPolicy({ minutes: 5 });
 		this.authenticationPolicy = AuthenticationPolicyFactory.getAuthenticationPolicy(settings);
 
-		this.gameManager.addGame(new SharedPixelInitializer(this));
+		this.gameManager.addGame(new SharedPixelCanvasInitializer(this));
 		this.mountChatManager();
 		this.startPlayerChangeEvents();
 	}
@@ -239,10 +239,7 @@ export class LobbyHandler extends CheckedNamespaceHandler<
 
 		chatGameManager.addChatGame(
 			(message, user, info) => {
-				if (message.startsWith('/hangman')) {
-					return true;
-				}
-				return false;
+				return message.startsWith('/hangman');
 			},
 			new Hangman(this.chatHandler),
 			false
@@ -250,6 +247,8 @@ export class LobbyHandler extends CheckedNamespaceHandler<
 	}
 
 	private async chooseGame(gameInitializer: GameInitializer<any>) {
+		// TODO refactor this
+
 		this.game = gameInitializer;
 		this.namespace.emit('game-chosen', {
 			url: this.game.name
