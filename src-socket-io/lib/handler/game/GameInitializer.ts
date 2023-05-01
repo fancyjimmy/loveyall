@@ -1,8 +1,8 @@
 import type { GameRequirements } from './types';
 import type { Class } from '../../../types';
 import type LobbyHandler from '../lobby/LobbyHandler';
-import type { PlayerInfo } from '../lobby/types';
 import type Game from './Game';
+import type Player from '../lobby/playerManager/Player';
 
 export default abstract class GameInitializer<
 	TGame extends Game,
@@ -12,21 +12,21 @@ export default abstract class GameInitializer<
 	public readonly requirements: TGameRequirements;
 	public readonly description: string = '';
 	public readonly name: string = '';
-	protected gameClass: Class<TGame, [LobbyHandler, PlayerInfo[], TGameOptions]>;
+	protected gameClass: Class<TGame, [LobbyHandler, Player[], TGameOptions]>;
 
 	protected constructor(
 		protected lobbyHandler: LobbyHandler,
-		gameClass: Class<TGame, [LobbyHandler, PlayerInfo[], TGameOptions]>,
+		gameClass: Class<TGame, [LobbyHandler, Player[], TGameOptions]>,
 		requirements: TGameRequirements
 	) {
 		this.requirements = requirements;
 		this.gameClass = gameClass;
 	}
 
-	public abstract loadGameConfig(players: PlayerInfo[], host: PlayerInfo): Promise<TGameOptions>;
+	public abstract loadGameConfig(players: Player[], host: Player | null): Promise<TGameOptions>;
 
 	// returns started Game
-	public startGame(lobbyHandler: LobbyHandler, players: PlayerInfo[], config: TGameOptions): TGame {
+	public startGame(lobbyHandler: LobbyHandler, players: Player[], config: TGameOptions): TGame {
 		const Game = this.gameClass.bind({}, lobbyHandler, players, config);
 		const game = new Game();
 		game.register();

@@ -2,7 +2,7 @@ import GameInitializer from '../../GameInitializer';
 import type { SharedPixelCanvasSettings } from './types';
 import SharedPixelCanvas from './SharedPixelCanvas';
 import type LobbyHandler from '../../../lobby/LobbyHandler';
-import type { PlayerInfo } from '../../../lobby/types';
+import type Player from '../../../lobby/playerManager/Player';
 
 export default class SharedPixelCanvasInitializer extends GameInitializer<
 	SharedPixelCanvas,
@@ -16,7 +16,7 @@ export default class SharedPixelCanvasInitializer extends GameInitializer<
 		super(lobbyManager, SharedPixelCanvas, { minPlayers: 1, maxPlayers: null });
 	}
 
-	loadGameConfig(sockets: PlayerInfo[], host: PlayerInfo): Promise<SharedPixelCanvasSettings> {
+	loadGameConfig(sockets: Player[], host: Player): Promise<SharedPixelCanvasSettings> {
 		return new Promise<SharedPixelCanvasSettings>((resolve, reject) => {
 			resolve({
 				width: 30,

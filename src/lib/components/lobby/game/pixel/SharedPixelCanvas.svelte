@@ -16,6 +16,16 @@
     let width = 100;
     let height = 100;
 
+    function setImage(pixels: Color[][]) {
+        for (let y = 0; y < pixels.length; y++) {
+            for (let x = 0; x < pixels[y].length; x++) {
+                const pixel = pixels[y][x];
+                ctx.fillStyle = `rgb(${pixel.r}, ${pixel.g}, ${pixel.b})`;
+                ctx.fillRect(x, y, 1, 1);
+            }
+        }
+    }
+
     function getInitialImage() {
         loading = false;
         socket.emit('pixel:initialImage', (pixels: Color[][]) => {
@@ -29,16 +39,13 @@
 
                 let x = (event.clientX - rect.left) * (canvas.width / rect.width);
                 let y = (event.clientY - rect.top) * (canvas.height / rect.height);
-                setPixel(Math.floor(x), Math.floor(y), hexToColor(color));
+
+                if (event.buttons === 1) {
+                    setPixel(Math.floor(x), Math.floor(y), hexToColor(color));
+                }
             });
 
-            for (let y = 0; y < pixels.length; y++) {
-                for (let x = 0; x < pixels[y].length; x++) {
-                    const pixel = pixels[y][x];
-                    ctx.fillStyle = `rgb(${pixel.r}, ${pixel.g}, ${pixel.b})`;
-                    ctx.fillRect(x, y, 1, 1);
-                }
-            }
+            setTimeout(() => setImage(pixels), 200);
         });
     }
 
@@ -74,6 +81,14 @@
         listenToPixelChanges();
     });
     let color = '#000000';
+
+    function download() {
+        const link = document.createElement('a');
+        link.download = 'image.png';
+        link.href = canvas.toDataURL();
+        link.click();
+    }
+
 </script>
 
 <div class="bg-red-500 w-full h-full">
@@ -87,6 +102,10 @@
                     console.log(response);
                 });
             }}>End
+            </button>
+
+            <button on:click={download}>
+                Download
             </button>
         {/if}
         <input type="color" bind:value={color}/>

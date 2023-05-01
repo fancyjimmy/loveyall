@@ -1,5 +1,5 @@
 import CheckedNamespaceHandler from '../../socket/CheckedNamespaceHandler';
-import type { Server, Socket } from 'socket.io';
+import type { Server } from 'socket.io';
 import {
 	createResponseSchema,
 	type LobbyClientEventFunctions,
@@ -80,6 +80,7 @@ export default class LobbyHandler extends CheckedNamespaceHandler<
 			ZLobbyEvents,
 			{
 				joined: (callback, socket) => {
+					console.log(socket.data);
 					callback({
 						username: socket.data!.player!.username,
 						role: socket.data!.player!.role,
@@ -213,7 +214,7 @@ export default class LobbyHandler extends CheckedNamespaceHandler<
 		}
 	}
 
-	get players(): PlayerInfo[] {
+	get playerInfos(): PlayerInfo[] {
 		return this.playerManager.getPlayerInfos();
 	}
 
@@ -246,7 +247,7 @@ export default class LobbyHandler extends CheckedNamespaceHandler<
 			maxPlayers: this.lobbySettings.maxPlayers,
 			isPrivate: this.lobbySettings.isPrivate,
 			authenticationPolicyType: this.lobbySettings.authenticationPolicy.name,
-			playerCount: this.players.length,
+			playerCount: this.playerInfos.length,
 			game: this.gameInitializer?.name ?? null
 		};
 	}
@@ -262,12 +263,6 @@ export default class LobbyHandler extends CheckedNamespaceHandler<
 				players: players.map(playerInfoToGeneralPlayerInfo)
 			});
 		});
-	}
-
-	socketFrom(player: PlayerInfo): Socket | null {
-		const socketId = this.playerManager.getSocket(player);
-		if (socketId === null) return null;
-		return this.namespace.sockets.get(socketId) ?? null;
 	}
 
 	private mountChatManager() {
@@ -308,11 +303,11 @@ export default class LobbyHandler extends CheckedNamespaceHandler<
 
 		try {
 			const config = await this.gameInitializer.loadGameConfig(
-				this.playerManager.getPlayerInfos(),
+				this.playerManager.players,
 				this.playerManager.getHost()
 			);
 
-			this.game = await this.gameInitializer.startGame(this, this.players, config);
+			this.game = await this.gameInitializer.startGame(this, this.playerManager.players, config);
 			this.game!.onEnd(() => {
 				this.game = null;
 				this.gameInitializer = null;

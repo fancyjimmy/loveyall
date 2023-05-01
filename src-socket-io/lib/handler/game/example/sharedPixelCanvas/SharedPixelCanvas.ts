@@ -54,18 +54,23 @@ export default class SharedPixelCanvas extends BasicGame<typeof ZSharedPixelCanv
 
 		this.#width = this.settings.width;
 		this.#height = this.settings.height;
-
 		this.#pixels = [];
-		for (let y = 0; y < this.#height; y++) {
-			this.#pixels[y] = [];
-			for (let x = 0; x < this.#width; x++) {
-				this.#pixels[y][x] = { r: 255, g: 255, b: 255 };
-			}
-		}
+
+		this.fillCanvas({ r: 255, g: 255, b: 255 });
 	}
 
 	get players(): Player[] {
 		return this.#players;
+	}
+
+	fillCanvas(color: Color) {
+		this.#pixels = [];
+		for (let y = 0; y < this.#height; y++) {
+			this.#pixels[y] = [];
+			for (let x = 0; x < this.#width; x++) {
+				this.#pixels[y][x] = color;
+			}
+		}
 	}
 
 	pixelUpdate(x: number, y: number, color: Color) {

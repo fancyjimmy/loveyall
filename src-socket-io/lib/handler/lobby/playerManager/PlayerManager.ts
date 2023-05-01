@@ -22,6 +22,10 @@ export default class PlayerManager {
 	private playerChangeListener = new Listener<(players: PlayerInfo[]) => void>();
 	private playerAddListener = new Listener<(player: PlayerInfo, players: PlayerInfo[]) => void>();
 
+	get players(): Player[] {
+		return [...this.#players];
+	}
+
 	constructor(
 		public readonly maxPlayers: number,
 		public readonly rolePolicy: RolePolicy,
@@ -44,11 +48,11 @@ export default class PlayerManager {
 	}
 
 	removePlayerBySocket(socket: Socket) {
-		const player = this.getPlayerInfo(socket.handshake.auth.token);
-		if (!player) {
+		const playerInfo = this.getPlayerInfo(socket.handshake.auth.token);
+		if (!playerInfo) {
 			return;
 		}
-		this.deletePlayer(player);
+		this.deletePlayer(playerInfo);
 	}
 
 	bindPlayerToSocket(socket: Socket) {
@@ -66,7 +70,7 @@ export default class PlayerManager {
 		player.updateSocket(socket);
 
 		socket.data = {
-			player: player
+			player: player.playerInfo
 		};
 	}
 
@@ -142,8 +146,8 @@ export default class PlayerManager {
 		return this.playerInfos;
 	}
 
-	getHost() {
-		return this.playerInfos.find((player) => player.role === LobbyRole.HOST) as PlayerInfo;
+	getHost(): Player | null {
+		return this.#players.find((player) => player.playerInfo.role === LobbyRole.HOST) ?? null;
 	}
 
 	onPlayerRemove(listener: (player: PlayerInfo, players: PlayerInfo[]) => void): number {
@@ -191,9 +195,10 @@ export default class PlayerManager {
 		return newUsername;
 	}
 
-	private deletePlayer(player: PlayerInfo) {
-		this.rolePolicy.setNextHost(this.playerInfos, player);
+	private deletePlayer(playerInfo: PlayerInfo) {
+		this.rolePolicy.setNextHost(this.#players, playerInfo);
+		this.#players = this.#players.filter((p) => p.playerInfo !== playerInfo);
 		this.playerChangeListener.call(this.playerInfos);
-		this.playerRemoveListener.call(player, this.playerInfos);
+		this.playerRemoveListener.call(playerInfo, this.playerInfos);
 	}
 }
