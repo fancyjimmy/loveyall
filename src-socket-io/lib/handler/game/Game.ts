@@ -1,4 +1,4 @@
-import type Player from './Player';
+import type Player from '../lobby/playerManager/Player';
 
 export default interface Game {
 	registerPlayer(player: Player): void;

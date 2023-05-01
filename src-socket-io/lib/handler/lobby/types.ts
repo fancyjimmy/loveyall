@@ -1,4 +1,3 @@
-import type { Socket } from 'socket.io';
 import { z } from 'zod';
 import type { LobbyInfo } from './manage/types';
 import { ZLobbyInfo } from './manage/types';
@@ -38,10 +37,6 @@ export type PlayerInfo<T = unknown> = z.infer<typeof ZPlayerInfo> & {
 	data?: T;
 };
 
-export type Player<T = unknown> = PlayerInfo<T> & {
-	reconnecting?: boolean;
-};
-
 export type LobbyClientEvents = {
 	joined: {
 		lobbyInfo: LobbyInfo;
@@ -65,31 +60,3 @@ export const ZJoinInfo = ZLobbyInfo.extend({
 	role: z.nativeEnum(LobbyRole),
 	username: z.string()
 });
-
-export type LobbyError = {
-	code: number;
-	message: string;
-};
-
-export type LobbyLifeCycleEvents = {
-	joined: {
-		player: Player;
-	};
-	hostChanged: {
-		player: Player;
-	};
-	playerChanged: {
-		player: Player;
-		joined: boolean;
-		allPlayers: Player[];
-	};
-	playerRemoved: {
-		player: Player;
-	};
-	left: {
-		player: Player;
-	};
-	disconnected: {
-		socket: Socket;
-	};
-};

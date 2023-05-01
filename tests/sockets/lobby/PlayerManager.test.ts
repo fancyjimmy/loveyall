@@ -1,162 +1,156 @@
-import {describe, expect, it} from "vitest";
-import PlayerManager from "../../../src-socket-io/lib/handler/lobby/playerManager/PlayerManager";
-import {sleep} from "../../util/asyncTesting";
-import type {Socket} from "socket.io";
+import { describe, expect, it } from 'vitest';
+import PlayerManager from '../../../src-socket-io/lib/handler/lobby/playerManager/PlayerManager';
+import { sleep } from '../../util/asyncTesting';
+import type { Socket } from 'socket.io';
 
+describe('PlayerManager', () => {
+	it('should work', async function () {
+		const playerManager = new PlayerManager(2, 1000 * 4);
 
-describe("PlayerManager", () => {
+		playerManager.onPlayerAdd((player) => {
+			console.log(`Added ${player.username}`);
+		});
 
-    it('should work', async function () {
-        const playerManager = new PlayerManager(2, 1000 * 4);
+		playerManager.onPlayerRemove((player) => {
+			console.log(`Removed ${player.username}`);
+		});
 
-        playerManager.onPlayerAdd((player) => {
-            console.log(`Added ${player.username}`);
-        });
+		playerManager.onPlayerChange((players) => {
+			console.log('changed');
+		});
 
-        playerManager.onPlayerRemove((player) => {
-            console.log(`Removed ${player.username}`);
-        });
+		playerManager.createPlayer({
+			username: 'test',
+			lobbyId: ''
+		});
 
-        playerManager.onPlayerChange((players) => {
-            console.log('changed');
-        });
+		await sleep(1000 * 3);
+	});
 
-        playerManager.addPlayer({
-            username: 'test',
-            lobbyId: "",
-        });
+	it('should work with bind 1', async function () {
+		const playerManager = new PlayerManager(2, 1000 * 2.5);
 
-        await sleep(1000 * 3);
-    });
+		playerManager.onPlayerAdd((player) => {
+			console.log(`Added ${player.username}`);
+		});
 
-    it('should work with bind 1', async function () {
-        const playerManager = new PlayerManager(2, 1000 * 2.5);
+		playerManager.onPlayerRemove((player) => {
+			console.log(`Removed ${player.username}`);
+			expect(true).toBeTruthy();
+		});
 
-        playerManager.onPlayerAdd((player) => {
-            console.log(`Added ${player.username}`);
-        });
+		playerManager.onPlayerChange((players) => {
+			console.log('changed');
+		});
 
-        playerManager.onPlayerRemove((player) => {
-            console.log(`Removed ${player.username}`);
-            expect(true).toBeTruthy();
-        });
+		const player = playerManager.createPlayer({
+			username: 'test',
+			lobbyId: ''
+		});
+		await sleep(1000);
+		await sleep(1000 * 2);
+	});
 
-        playerManager.onPlayerChange((players) => {
-            console.log('changed');
-        });
+	it(
+		'should work with bind 2',
+		async function () {
+			const playerManager = new PlayerManager(2, 1000 * 2.5);
 
-        const player = playerManager.addPlayer({
-            username: 'test',
-            lobbyId: "",
-        });
-        await sleep(1000);
-        await sleep(1000 * 2);
+			playerManager.onPlayerAdd((player) => {
+				console.log(`Added ${player.username}`);
+			});
 
-    });
+			playerManager.onPlayerRemove((player) => {
+				console.log(`Removed ${player.username}`);
+				expect(true).toBeTruthy(); // should not be called
+			});
 
-    it('should work with bind 2', async function () {
-        const playerManager = new PlayerManager(2, 1000 * 2.5);
+			playerManager.onPlayerChange((players) => {
+				console.log('changed');
+			});
 
-        playerManager.onPlayerAdd((player) => {
-            console.log(`Added ${player.username}`);
-        });
+			const player = playerManager.createPlayer({
+				username: 'test',
+				lobbyId: ''
+			});
+			await sleep(1000);
 
-        playerManager.onPlayerRemove((player) => {
-            console.log(`Removed ${player.username}`);
-            expect(true).toBeTruthy(); // should not be called
-        });
+			const socket = {
+				id: 'test',
+				handshake: {
+					auth: {
+						token: player.sessionKey
+					}
+				}
+			} as unknown as Socket;
+			playerManager.bindPlayerToSocket(socket);
 
-        playerManager.onPlayerChange((players) => {
-            console.log('changed');
-        });
+			await sleep(1000 * 2);
+			expect(playerManager.getPlayerInfo(player.sessionKey)).toBeTruthy();
 
-        const player = playerManager.addPlayer({
-            username: 'test',
-            lobbyId: "",
-        });
-        await sleep(1000);
+			expect(playerManager.getPlayerInfos().includes(player)).toBeTruthy();
+			expect(playerManager.getPlayerInfos().length).toBe(1);
+			expect(socket.data.player).toBe(player);
+			playerManager.unbindPlayerFromSocket(socket);
+			expect(socket.data.player === player).toBeFalsy();
 
+			await sleep(1000 * 3);
+		},
+		{
+			timeout: 1000 * 10
+		}
+	);
 
-        const socket = {
-            id: "test",
-            handshake: {
-                auth: {
-                    token: player.sessionKey
-                }
-            }
-        } as unknown as Socket;
-        playerManager.bindPlayerFromSocket(socket);
+	it('should work with 2 players ', async function () {
+		const playerManager = new PlayerManager(2, 1000 * 2.5);
 
-        await sleep(1000 * 2);
-        expect(playerManager.getPlayer(player.sessionKey)).toBeTruthy();
+		const player = playerManager.createPlayer({
+			username: 'test',
+			lobbyId: ''
+		});
 
-        expect(playerManager.getPlayers().includes(player)).toBeTruthy();
-        expect(playerManager.getPlayers().length).toBe(1);
-        expect(socket.data.player).toBe(player);
-        playerManager.unbindPlayerFromSocket(socket);
-        expect(socket.data.player === player).toBeFalsy();
+		const player2 = playerManager.createPlayer({
+			username: 'test',
+			lobbyId: ''
+		});
 
-        await sleep(1000 * 3);
-    }, {
-        timeout: 1000 * 10
-    });
+		expect(player.username === player2.username).toBeTruthy;
 
-    it('should work with 2 players ', async function () {
-        const playerManager = new PlayerManager(2, 1000 * 2.5);
+		playerManager.bindPlayerToSocket({
+			id: 'test',
+			handshake: {
+				auth: {
+					token: player.sessionKey
+				}
+			}
+		} as unknown as Socket);
+	});
 
-        const player = playerManager.addPlayer({
-            username: 'test',
-            lobbyId: "",
-        });
+	it('should work max should work ', async function () {
+		const playerManager = new PlayerManager(2, 1000 * 2.5);
 
-        const player2 = playerManager.addPlayer({
-            username: 'test',
-            lobbyId: "",
-        });
+		const player = playerManager.createPlayer({
+			username: 'test',
+			lobbyId: ''
+		});
 
-        expect(player.username === player2.username).toBeTruthy;
+		const player2 = playerManager.createPlayer({
+			username: 'test',
+			lobbyId: ''
+		});
 
+		try {
+			const player3 = playerManager.createPlayer({
+				username: 'test',
+				lobbyId: ''
+			});
+		} catch (e) {
+			if (e instanceof Error) {
+				expect(e.message.includes('Max players reached')).toBeTruthy();
+			}
+		}
 
-        playerManager.bindPlayerFromSocket({
-            id: "test",
-            handshake: {
-                auth: {
-                    token: player.sessionKey
-                }
-            }
-        } as unknown as Socket);
-
-    });
-
-
-    it('should work max should work ', async function () {
-        const playerManager = new PlayerManager(2, 1000 * 2.5);
-
-        const player = playerManager.addPlayer({
-            username: 'test',
-            lobbyId: "",
-        });
-
-        const player2 = playerManager.addPlayer({
-            username: 'test',
-            lobbyId: "",
-        });
-
-        try {
-
-            const player3 = playerManager.addPlayer({
-                username: 'test',
-                lobbyId: "",
-            });
-        } catch (e) {
-            if (e instanceof Error) {
-                expect(e.message.includes("Max players reached")).toBeTruthy();
-            }
-        }
-
-        expect(player.username === player2.username).toBeFalsy();
-        expect(player2.username).toBe("test#1");
-
-    });
-
+		expect(player.username === player2.username).toBeFalsy();
+		expect(player2.username).toBe('test#1');
+	});
 });

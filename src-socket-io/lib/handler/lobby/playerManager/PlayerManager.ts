@@ -6,6 +6,7 @@ import PlayerTimeoutPolicy from '../policy/time/player/PlayerTimeoutPolicy';
 import { Listener } from '../../../utilities/Listener';
 import * as crypto from 'crypto';
 import type { RolePolicy } from '../policy/role';
+import Player from './Player';
 
 type PlayerExtraData = {
 	timeout: PlayerTimeoutPolicy;
@@ -13,6 +14,8 @@ type PlayerExtraData = {
 };
 export default class PlayerManager {
 	private playerMap: Map<PlayerInfo, PlayerExtraData> = new Map<PlayerInfo, PlayerExtraData>();
+
+	#players: Player[] = [];
 	private playerRemoveListener = new Listener<
 		(player: PlayerInfo, players: PlayerInfo[]) => void
 	>();
@@ -36,80 +39,78 @@ export default class PlayerManager {
 		});
 	}
 
-	private get players(): PlayerInfo[] {
-		return Array.from(this.playerMap.keys());
+	public get playerInfos(): PlayerInfo[] {
+		return this.#players.map((player) => player.playerInfo);
 	}
 
-	removePlayer(socket: Socket) {
-		const player = this.getPlayer(socket.handshake.auth.token);
+	removePlayerBySocket(socket: Socket) {
+		const player = this.getPlayerInfo(socket.handshake.auth.token);
 		if (!player) {
 			return;
 		}
 		this.deletePlayer(player);
 	}
 
-	bindPlayerFromSocket(socket: Socket) {
-		const player = this.getPlayer(socket.handshake.auth.token);
+	bindPlayerToSocket(socket: Socket) {
+		const player = this.getPlayerBySession(socket.handshake.auth.token);
 		if (!player) {
+			// not found by session storage
 			throw new ClientError('Player not found');
 		}
 
-		console.log('bind  ' + player.username);
-
-		if (this.playerMap.get(player)!.socketId !== null) {
-			throw new ClientError('Already online');
+		console.log('bind  ' + player.playerInfo.username);
+		if (player.isConnected) {
+			throw new ClientError('Player already connected');
 		}
+
+		player.updateSocket(socket);
 
 		socket.data = {
 			player: player
 		};
-
-		this.playerMap.get(player)!.socketId = socket.id;
-		this.playerMap.get(player)!.timeout.trigger('bind', null);
 	}
 
-	getPlayer(token: string): PlayerInfo | undefined {
-		return this.players.find((player) => player.sessionKey === token);
+	getPlayerInfo(token: string): PlayerInfo | undefined {
+		return this.playerInfos.find((player) => player.sessionKey === token);
 	}
 
-	addPlayer(joinOptions: LobbyJoinOption) {
-		if (this.players.length >= this.maxPlayers) {
+	createPlayer(joinOptions: LobbyJoinOption) {
+		if (this.playerInfos.length >= this.maxPlayers) {
 			throw new ClientError('Max players reached');
 		}
-		const sessionKey = this.generateSessionKey();
 
-		const role = this.players.length === 0 ? LobbyRole.HOST : LobbyRole.PLAYER;
-		const username = this.getUniqueUsername(joinOptions.username);
-		const player: PlayerInfo = {
-			username: username,
-			role: role,
-			joinedTime: new Date(),
-			sessionKey
-		};
-
+		const playerInfo = this.generatePlayerInfo(joinOptions);
 		const playerTimeoutPolicy = new PlayerTimeoutPolicy(this.milliseconds);
 
-		this.playerMap.set(player, {
-			timeout: playerTimeoutPolicy,
-			socketId: null
+		const player = new Player(playerTimeoutPolicy, playerInfo, null);
+		this.#players.push(player);
+
+		player.onTimeout(() => {
+			this.deletePlayer(player.playerInfo);
 		});
 
-		playerTimeoutPolicy.onTimeout(() => {
-			this.deletePlayer(player);
-		});
-
-		this.playerChangeListener.call(this.players);
-		this.playerAddListener.call(player, this.players);
-		return player;
+		this.playerChangeListener.call(this.playerInfos);
+		this.playerAddListener.call(playerInfo, this.playerInfos);
+		return playerInfo;
 	}
 
+	/**
+	 * kicks a player from the lobby
+	 * returns the socket id of the kicked player
+	 * returns null if the player was not connected with a socket (happens when he reloads the page)
+	 * @param host
+	 * @param name
+	 */
 	tryKickPlayer(host: PlayerInfo, name: string): string | null {
 		if (host.role !== LobbyRole.HOST) {
+			// happens when somebody calls the kick method as a player
+			// should be prevented by front end
 			throw new ClientError('Only host can kick');
 		}
 
-		const kicked = this.players.find((player) => player.username === name);
+		const kicked = this.playerInfos.find((player) => player.username === name);
 		if (!kicked) {
+			// happens when you try to kick a player with an unknown name
 			throw new ClientError('Player not found');
 		}
 		const socketId = this.playerMap.get(kicked)!.socketId;
@@ -117,20 +118,32 @@ export default class PlayerManager {
 		return socketId;
 	}
 
+	getPlayerBySession(session: string): Player | undefined {
+		return this.#players.find((player) => player.playerInfo.sessionKey === session);
+	}
+
+	getPlayerFromSocket(socket: Socket): Player | undefined {
+		const player = this.#players.find((player) => player.socket?.id === socket.id);
+		return player;
+	}
+
 	unbindPlayerFromSocket(socket: Socket<{ player: PlayerInfo }>) {
-		if (this.playerMap.get(socket.data.player)?.socketId === null) {
+		const player = this.getPlayerFromSocket(socket);
+		if (player === null) {
 			throw new ClientError(
 				"Player isn't connected to socket, event though it passed the connection"
 			);
 		}
-
-		this.playerMap.get(socket.data.player)!.socketId = null;
-		this.playerMap.get(socket.data.player)!.timeout.trigger('disconnect', null);
-		socket.data = {};
+		player?.updateSocket(null);
+		delete socket.data.player;
 	}
 
-	getPlayers(): PlayerInfo[] {
-		return this.players;
+	getPlayerInfos(): PlayerInfo[] {
+		return this.playerInfos;
+	}
+
+	getHost() {
+		return this.playerInfos.find((player) => player.role === LobbyRole.HOST) as PlayerInfo;
 	}
 
 	onPlayerRemove(listener: (player: PlayerInfo, players: PlayerInfo[]) => void): number {
@@ -145,14 +158,19 @@ export default class PlayerManager {
 		return this.playerAddListener.addListener(listener);
 	}
 
-	private getUniqueUsername(username: string): string {
-		let count = 1;
-		let newUsername = username;
-		const players = this.players;
-		while (players.map((player) => player.username).includes(newUsername)) {
-			newUsername = `${username}#${count++}`;
-		}
-		return newUsername;
+	private generatePlayerInfo(joinOptions: LobbyJoinOption) {
+		const sessionKey = this.generateSessionKey();
+
+		const role = this.playerInfos.length === 0 ? LobbyRole.HOST : LobbyRole.PLAYER;
+		const username = this.getUniqueUsername(joinOptions.username);
+		const playerInfo: PlayerInfo = {
+			username: username,
+			role: role,
+			joinedTime: new Date(),
+			sessionKey
+		};
+
+		return playerInfo;
 	}
 
 	getSocket(player: PlayerInfo) {
@@ -163,14 +181,19 @@ export default class PlayerManager {
 		return crypto.randomUUID();
 	}
 
-	getHost() {
-		return this.players.find((player) => player.role === LobbyRole.HOST) as PlayerInfo;
+	private getUniqueUsername(username: string): string {
+		let count = 1;
+		let newUsername = username;
+		const infos = this.playerInfos;
+		while (infos.map((player) => player.username).includes(newUsername)) {
+			newUsername = `${username}#${count++}`;
+		}
+		return newUsername;
 	}
 
 	private deletePlayer(player: PlayerInfo) {
-		this.playerMap.delete(player);
-		this.rolePolicy.setNextHost(this.players, player);
-		this.playerChangeListener.call(this.players);
-		this.playerRemoveListener.call(player, this.players);
+		this.rolePolicy.setNextHost(this.playerInfos, player);
+		this.playerChangeListener.call(this.playerInfos);
+		this.playerRemoveListener.call(player, this.playerInfos);
 	}
 }

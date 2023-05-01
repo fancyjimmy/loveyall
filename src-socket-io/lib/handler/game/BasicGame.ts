@@ -1,5 +1,5 @@
 import type { z } from 'zod';
-import type Player from './Player';
+import type Player from '../lobby/playerManager/Player';
 import ClientError from '../../ClientError';
 import type Game from './Game';
 import type { GameHandler, PlayerEvents } from './types';
@@ -21,7 +21,6 @@ export default abstract class BasicGame<ZHandler extends z.ZodObject<Record<stri
 		if (!player.isConnected) {
 			return;
 		}
-		player.socket?.on('disconnect', () => this.events.disconnect(player));
 		for (let key in this.handler) {
 			const handlerValidator = this.validator.shape[key];
 			player.socket?.join(this.name);
@@ -49,6 +48,10 @@ export default abstract class BasicGame<ZHandler extends z.ZodObject<Record<stri
 	private endListener = new Listener();
 
 	register() {
+		this.players.forEach((player) => {
+			player.onDisconnect(() => this.events.disconnect(player));
+			player.onReconnect(() => this.events.reconnect(player));
+		});
 		this.players.forEach(this.registerPlayer);
 	}
 

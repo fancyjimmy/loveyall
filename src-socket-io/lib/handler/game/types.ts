@@ -1,6 +1,6 @@
 import type { Socket } from 'socket.io';
 import type { PlayerInfo } from '../lobby/types';
-import type Player from './Player';
+import type Player from '../lobby/playerManager/Player';
 
 export type GameRequirements = {
 	minPlayers: number;

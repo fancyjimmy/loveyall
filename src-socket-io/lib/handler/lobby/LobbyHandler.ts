@@ -86,7 +86,7 @@ export default class LobbyHandler extends CheckedNamespaceHandler<
 						chatRoomId: this.chatRoomId,
 						isPrivate: this.lobbySettings.isPrivate,
 						lobbyId: this.lobbyId,
-						players: this.playerManager.getPlayers().map(playerInfoToGeneralPlayerInfo),
+						players: this.playerManager.getPlayerInfos().map(playerInfoToGeneralPlayerInfo),
 						name: this.lobbySettings.name,
 						maxPlayers: this.lobbySettings.maxPlayers,
 						authenticationPolicy: this.lobbySettings.authenticationPolicy,
@@ -95,7 +95,7 @@ export default class LobbyHandler extends CheckedNamespaceHandler<
 				},
 				changeSettings: (data, io) => {},
 				leave: (callback, socket) => {
-					this.playerManager.removePlayer(socket);
+					this.playerManager.removePlayerBySocket(socket);
 					callback();
 					socket.disconnect();
 				},
@@ -151,7 +151,7 @@ export default class LobbyHandler extends CheckedNamespaceHandler<
 				onConnection: (socket) => {
 					// throws a client Error if the player is not authenticated
 					try {
-						this.playerManager.bindPlayerFromSocket(socket);
+						this.playerManager.bindPlayerToSocket(socket);
 					} catch (e) {
 						if (e instanceof ClientError) {
 							console.log(e);
@@ -214,7 +214,7 @@ export default class LobbyHandler extends CheckedNamespaceHandler<
 	}
 
 	get players(): PlayerInfo[] {
-		return this.playerManager.getPlayers();
+		return this.playerManager.getPlayerInfos();
 	}
 
 	private get chatRoomId(): string {
@@ -234,7 +234,7 @@ export default class LobbyHandler extends CheckedNamespaceHandler<
 	 */
 	public join(lobbyJoinOption: LobbyJoinOption) {
 		if (this.authenticationPolicy.canJoin(lobbyJoinOption)) {
-			return this.playerManager.addPlayer(lobbyJoinOption);
+			return this.playerManager.createPlayer(lobbyJoinOption);
 		}
 		return null;
 	}
@@ -308,7 +308,7 @@ export default class LobbyHandler extends CheckedNamespaceHandler<
 
 		try {
 			const config = await this.gameInitializer.loadGameConfig(
-				this.playerManager.getPlayers(),
+				this.playerManager.getPlayerInfos(),
 				this.playerManager.getHost()
 			);
 

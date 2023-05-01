@@ -1,17 +1,5 @@
-import type {LobbyCreationSettings, LobbyJoinOption} from "../../manage/types";
-import PlayerManager from "../../playerManager/PlayerManager";
+import type { LobbyJoinOption } from '../../manage/types';
 
-export default abstract class AuthenticationPolicy {
-    public readonly playerManager: PlayerManager;
-
-    constructor(lobbyCreationSettings: LobbyCreationSettings) {
-        this.playerManager = new PlayerManager(lobbyCreationSettings.maxPlayers);
-    }
-
-    abstract canJoin(lobbyJoinOption: LobbyJoinOption): boolean;
-
-    setUpPlayer(lobbyJoinOption: LobbyJoinOption) {
-        return this.playerManager.addPlayer(lobbyJoinOption);
-    };
-
+export default interface AuthenticationPolicy {
+	canJoin(lobbyJoinOption: LobbyJoinOption): boolean;
 }

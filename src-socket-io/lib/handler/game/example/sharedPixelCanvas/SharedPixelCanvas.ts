@@ -1,8 +1,7 @@
 import type { z } from 'zod';
 import type LobbyHandler from '../../../lobby/LobbyHandler';
 import { type Color, ZSharedPixelCanvasEvents, ZSharedPixelCanvasSettings } from './types';
-import type { PlayerInfo } from '../../../lobby/types';
-import Player from '../../Player';
+import type Player from '../../../lobby/playerManager/Player';
 import BasicGame from '../../BasicGame';
 
 export default class SharedPixelCanvas extends BasicGame<typeof ZSharedPixelCanvasEvents> {
@@ -10,11 +9,16 @@ export default class SharedPixelCanvas extends BasicGame<typeof ZSharedPixelCanv
 	#height: number;
 
 	#pixels: Color[][];
+
 	#players: Player[] = [];
+
+	emit(event: string, ...args: any[]) {
+		this.lobbyHandler.namespace.to(this.name).emit(event, ...args);
+	}
 
 	constructor(
 		private lobbyHandler: LobbyHandler,
-		private playersInfos: PlayerInfo[],
+		players: Player[],
 		private settings: z.infer<typeof ZSharedPixelCanvasSettings>
 	) {
 		super(
@@ -40,10 +44,13 @@ export default class SharedPixelCanvas extends BasicGame<typeof ZSharedPixelCanv
 					return;
 				},
 				reconnect: (player) => {
+					this.registerPlayer(player);
 					return;
 				}
 			}
 		);
+
+		this.#players = players;
 
 		this.#width = this.settings.width;
 		this.#height = this.settings.height;
@@ -57,16 +64,7 @@ export default class SharedPixelCanvas extends BasicGame<typeof ZSharedPixelCanv
 		}
 	}
 
-	emit(event: string, ...args: any[]) {
-		this.lobbyHandler.namespace.to(this.name).emit(event, ...args);
-	}
-
-	get players() {
-		if (this.#players.length === 0) {
-			this.#players = this.playersInfos.map((playerInfo) => {
-				return new Player(playerInfo, this.lobbyHandler.socketFrom(playerInfo));
-			});
-		}
+	get players(): Player[] {
 		return this.#players;
 	}
 
