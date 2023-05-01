@@ -8,7 +8,7 @@ export default class SharedPixelCanvas extends BasicGame<typeof ZSharedPixelCanv
 	#width: number;
 	#height: number;
 
-	#pixels: Color[][];
+	#pixels: (Color | null)[][];
 
 	#players: Player[] = [];
 
@@ -56,14 +56,14 @@ export default class SharedPixelCanvas extends BasicGame<typeof ZSharedPixelCanv
 		this.#height = this.settings.height;
 		this.#pixels = [];
 
-		this.fillCanvas({ r: 255, g: 255, b: 255 });
+		this.fillCanvas(null);
 	}
 
 	get players(): Player[] {
 		return this.#players;
 	}
 
-	fillCanvas(color: Color) {
+	fillCanvas(color: Color | null) {
 		this.#pixels = [];
 		for (let y = 0; y < this.#height; y++) {
 			this.#pixels[y] = [];
@@ -73,7 +73,7 @@ export default class SharedPixelCanvas extends BasicGame<typeof ZSharedPixelCanv
 		}
 	}
 
-	pixelUpdate(x: number, y: number, color: Color) {
+	pixelUpdate(x: number, y: number, color: Color | null) {
 		this.#pixels[y][x] = color;
 		this.emit('pixel-change', x, y, color);
 	}

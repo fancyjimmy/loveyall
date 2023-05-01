@@ -5,6 +5,10 @@ export default interface Game {
 
 	register(): void;
 
+	unregister(): void;
+
+	unregisterPlayer(player: Player): void;
+
 	get players(): Player[];
 
 	onEnd(callback: () => void): void;

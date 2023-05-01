@@ -184,10 +184,16 @@ export default class LobbyHandler extends CheckedNamespaceHandler<
 
 		this.playerManager.onPlayerRemove((player, players) => {
 			this.timeoutPolicy.trigger('playerLeave', players.length);
+			console.log('player left');
 		});
 
 		this.playerManager.onPlayerAdd((player, players) => {
 			this.timeoutPolicy.trigger('playerJoined', players.length);
+			console.log('player joined');
+		});
+
+		this.timeoutPolicy.onTimeout(() => {
+			console.log('lobby timed out');
 		});
 		this.authenticationPolicy = AuthenticationPolicyFactory.getAuthenticationPolicy(settings);
 

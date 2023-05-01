@@ -2,6 +2,7 @@
 
     import type {Socket} from "socket.io";
     import {onMount} from "svelte";
+    import {role} from "../../../routes/lobby/[lobbyId]/gameStore.ts";
 
     type GameOption = {
         name: string,
@@ -34,5 +35,8 @@
 <div>
     <p>Games</p>
 
+    {#if $role}
+
+    {/if}
     <button class="bg-lime-500 rounded p-2" on:click={() => {open("pixel")}}> Pixel</button>
 </div>

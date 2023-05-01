@@ -112,14 +112,13 @@ export default class PlayerManager {
 			throw new ClientError('Only host can kick');
 		}
 
-		const kicked = this.playerInfos.find((player) => player.username === name);
+		const kicked = this.players.find((player) => player.playerInfo.username === name);
 		if (!kicked) {
 			// happens when you try to kick a player with an unknown name
 			throw new ClientError('Player not found');
 		}
-		const socketId = this.playerMap.get(kicked)!.socketId;
-		this.deletePlayer(kicked);
-		return socketId;
+		this.deletePlayer(kicked.playerInfo);
+		return kicked?.socket?.id ?? null;
 	}
 
 	getPlayerBySession(session: string): Player | undefined {

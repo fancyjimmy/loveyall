@@ -49,8 +49,12 @@ export default abstract class BasicGame<ZHandler extends z.ZodObject<Record<stri
 
 	register() {
 		this.players.forEach((player) => {
-			player.onDisconnect(() => this.events.disconnect(player));
-			player.onReconnect(() => this.events.reconnect(player));
+			const disconnectListener = player.onDisconnect(() => this.events.disconnect(player));
+			const reconnectListener = player.onReconnect(() => this.events.reconnect(player));
+			this.onEnd(() => {
+				player.removeDisconnectListener(disconnectListener);
+				player.removeReconnectListener(reconnectListener);
+			});
 		});
 		this.players.forEach(this.registerPlayer);
 	}
@@ -59,8 +63,23 @@ export default abstract class BasicGame<ZHandler extends z.ZodObject<Record<stri
 		this.endListener.addListener(callback);
 	}
 
+	unregister(): void {
+		this.players.forEach((player) => {
+			this.unregisterPlayer(player);
+		});
+	}
+
+	unregisterPlayer(player: Player): void {
+		player.socket?.leave(this.name);
+
+		Object.keys(this.handler).forEach((key) => {
+			player.socket?.removeAllListeners(`${this.name}:${key}`);
+		});
+	}
+
 	protected end(): void {
 		this.endListener.call();
+		this.unregister();
 	}
 
 	private emitError(player: Player, error: any) {
