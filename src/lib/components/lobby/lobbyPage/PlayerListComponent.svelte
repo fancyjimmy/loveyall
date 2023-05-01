@@ -17,9 +17,11 @@
     function randomChoice(arr) {
         return arr[Math.floor(arr.length * Math.random())];
     }
+
+    export let maxPlayers = 0;
 </script>
 
-<div class="flex flex-col h-full">
+<div class="flex flex-col h-full max-h-48">
     <h3 class="text-slate-400 text-xs font-bold">PLAYERS - {players.length}</h3>
     <div class="flex-1 flex flex-col w-full overflow-y-auto scrollbar-hidden p-1">
         {#each players as player}

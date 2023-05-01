@@ -19,8 +19,8 @@ export default class SharedPixelCanvasInitializer extends GameInitializer<
 	loadGameConfig(sockets: PlayerInfo[], host: PlayerInfo): Promise<SharedPixelCanvasSettings> {
 		return new Promise<SharedPixelCanvasSettings>((resolve, reject) => {
 			resolve({
-				width: 100,
-				height: 100
+				width: 30,
+				height: 30
 			});
 		});
 	}

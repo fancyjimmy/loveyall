@@ -51,6 +51,10 @@ export default class LobbyManagerHandler extends CheckedServerHandler<
 					const lobby = new LobbyHandler(this.io, id, settings);
 					this.lobbyMap.set(id, lobby);
 					lobby.start();
+					lobby.onEnd(() => {
+						this.lobbyMap.delete(id);
+					});
+
 					cb({
 						data: lobby.generalInfo,
 						success: true,

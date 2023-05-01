@@ -46,7 +46,7 @@
     }
 
     .tooltip {
-        @apply bg-slate-900 text-white;
+        @apply bg-slate-900 text-white rounded;
     }
 }
 

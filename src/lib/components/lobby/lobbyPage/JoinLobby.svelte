@@ -1,7 +1,7 @@
 <script lang="ts">
     import {createEventDispatcher} from "svelte";
-    import {GeneralLobbyInfo, Response} from "../../../../src-socket-io/lib/handler/lobby/manage/types";
-    import {io} from "../../../lib/WebsocketConnection";
+    import {GeneralLobbyInfo, Response} from "../../../../../src-socket-io/lib/handler/lobby/manage/types";
+    import {io} from "../../../WebsocketConnection";
 
     const dispatch = createEventDispatcher();
 

@@ -6,4 +6,6 @@ export default interface Game {
 	register(): void;
 
 	get players(): Player[];
+
+	onEnd(callback: () => void): void;
 }

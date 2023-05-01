@@ -25,8 +25,14 @@ export default class SharedPixelCanvas extends BasicGame<typeof ZSharedPixelCanv
 					cb(this.#pixels);
 				},
 				updatePixel: ([x, y, color], player) => {
-					console.log(x, y, color);
 					this.pixelUpdate(x, y, color);
+				},
+				end: (cb, player) => {
+					if (!player.isHost) {
+						cb({ success: false, message: 'Not Authorized' });
+					}
+
+					this.end();
 				}
 			},
 			{
@@ -51,6 +57,10 @@ export default class SharedPixelCanvas extends BasicGame<typeof ZSharedPixelCanv
 		}
 	}
 
+	emit(event: string, ...args: any[]) {
+		this.lobbyHandler.namespace.to(this.name).emit(event, ...args);
+	}
+
 	get players() {
 		if (this.#players.length === 0) {
 			this.#players = this.playersInfos.map((playerInfo) => {
@@ -62,6 +72,6 @@ export default class SharedPixelCanvas extends BasicGame<typeof ZSharedPixelCanv
 
 	pixelUpdate(x: number, y: number, color: Color) {
 		this.#pixels[y][x] = color;
-		this.lobbyHandler.namespace.to(this.name).emit('pixel-change', x, y, color);
+		this.emit('pixel-change', x, y, color);
 	}
 }

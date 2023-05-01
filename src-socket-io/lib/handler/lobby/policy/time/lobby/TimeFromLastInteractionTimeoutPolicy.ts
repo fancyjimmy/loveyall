@@ -31,13 +31,5 @@ export default class TimeFromLastInteractionTimeoutPolicy extends LobbyTimeoutPo
 
 	trigger<TKey extends keyof LobbyTimeoutEvents>(type: TKey, data: LobbyTimeoutEvents[TKey]): void {
 		super.trigger(type, data);
-
-		if (type === 'playerJoined') {
-			this.timer.stop();
-		} else if (type === 'playerLeave') {
-			if (data == 0) this.timer.start();
-		} else if (type === 'lobbyCreated') {
-			this.timer.start();
-		}
 	}
 }

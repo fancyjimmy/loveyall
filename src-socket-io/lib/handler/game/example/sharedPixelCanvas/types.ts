@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { createResponseSchema } from '../../../lobby/types';
 
 export const ZColor = z.object({
 	r: z.number().min(0).max(255),
@@ -11,7 +12,8 @@ export const ZSharedPixelCanvasEvents = z.object({
 		.function()
 		.args(z.array(z.array(ZColor)))
 		.returns(z.void()),
-	updatePixel: z.tuple([z.number(), z.number(), ZColor])
+	updatePixel: z.tuple([z.number(), z.number(), ZColor]),
+	end: createResponseSchema(z.void())
 });
 
 export const ZSharedPixelCanvasSettings = z.object({

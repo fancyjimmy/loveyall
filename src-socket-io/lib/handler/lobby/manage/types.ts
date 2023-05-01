@@ -22,17 +22,16 @@ export const ZLobbySettings = z.object({
 });
 
 export const ZLobbyCreationSettings = ZLobbySettings.omit({ chatRoomId: true });
-export const ZGeneralLobbyInfo = ZLobbySettings.omit({
+export const ZLobbyInfo = ZLobbySettings.extend({
+	game: z.string().nullable(),
+	lobbyId: z.string().nonempty({ message: 'Lobby Id must be set' })
+});
+export const ZGeneralLobbyInfo = ZLobbyInfo.omit({
 	chatRoomId: true,
 	authenticationPolicy: true
 }).extend({
 	playerCount: z.number().min(0),
-	authenticationPolicyType: z.nativeEnum(AuthenticationPolicyType),
-	lobbyId: z.string().nonempty({ message: 'Lobby Id must be set' })
-});
-
-export const ZLobbyInfo = ZLobbySettings.extend({
-	lobbyId: z.string().nonempty({ message: 'Lobby Id must be set' })
+	authenticationPolicyType: z.nativeEnum(AuthenticationPolicyType)
 });
 
 export type LobbyInfo = z.infer<typeof ZLobbyInfo>;

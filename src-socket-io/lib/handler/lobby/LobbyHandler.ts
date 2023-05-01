@@ -30,6 +30,8 @@ import Hangman from './chatGame/example/Hangman';
 import type GameInitializer from '../game/GameInitializer';
 import GameManager from '../game/GameManager';
 import SharedPixelCanvasInitializer from '../game/example/sharedPixelCanvas/SharedPixelCanvasInitializer';
+import type Game from '../game/Game';
+import { Listener } from '../../utilities/Listener';
 
 export function playerInfoToGeneralPlayerInfo(player: PlayerInfo): Omit<PlayerInfo, 'sessionKey'> {
 	return {
@@ -40,6 +42,8 @@ export function playerInfoToGeneralPlayerInfo(player: PlayerInfo): Omit<PlayerIn
 }
 
 export type JoinInfo = z.infer<typeof ZJoinInfo>;
+
+type LobbyState = 'lobby' | 'game-initializing' | 'game-running';
 export const ZLobbyEvents = z.object({
 	joined: z.function().args(ZJoinInfo).returns(z.void()),
 	changeSettings: z.tuple([ZLobbyCreationSettings.partial(), createResponseSchema(z.void())]),
@@ -63,8 +67,11 @@ export default class LobbyHandler extends CheckedNamespaceHandler<
 	private readonly rolePolicy: RolePolicy;
 	#chatRoomId: string | null = null;
 	private playerManager: PlayerManager;
-	private game: GameInitializer<any> | null = null;
+	private gameInitializer: GameInitializer<any> | null = null;
 	private gameManager: GameManager = new GameManager();
+
+	private game: Game | null = null;
+	private endListener = new Listener();
 
 	constructor(io: Server, private lobbyId: string, settings: LobbyCreationSettings) {
 		super(
@@ -82,7 +89,8 @@ export default class LobbyHandler extends CheckedNamespaceHandler<
 						players: this.playerManager.getPlayers().map(playerInfoToGeneralPlayerInfo),
 						name: this.lobbySettings.name,
 						maxPlayers: this.lobbySettings.maxPlayers,
-						authenticationPolicy: this.lobbySettings.authenticationPolicy
+						authenticationPolicy: this.lobbySettings.authenticationPolicy,
+						game: this.gameInitializer?.name ?? null
 					});
 				},
 				changeSettings: (data, io) => {},
@@ -95,8 +103,17 @@ export default class LobbyHandler extends CheckedNamespaceHandler<
 				ping: (cb) => {
 					cb();
 				},
-				start: ([game, cb]) => {
-					// TODO Refactor and think about how to handle changes
+				start: ([game, cb], socket) => {
+					if (!(socket.data?.player?.role === 'host')) {
+						cb({ message: 'You are not the host', success: false });
+						return;
+					}
+
+					if (this.gameInitializing || this.gameRunning) {
+						cb({ message: 'Game already running', success: false });
+						return;
+					}
+
 					const initializer = this.gameManager.getGameInitializer(game);
 					if (initializer) {
 						this.chooseGame(initializer).then((_) => {
@@ -157,7 +174,20 @@ export default class LobbyHandler extends CheckedNamespaceHandler<
 		this.playerManager = new PlayerManager(settings.maxPlayers, this.rolePolicy, 10 * 1000);
 		this.chatHandler = new ServerChatHandler(io, this.chatRoomId, false);
 		this.lobbySettings = { ...settings, chatRoomId: this.chatRoomId };
-		this.timeoutPolicy = new DefaultLobbyTimeoutPolicy({ minutes: 5 });
+		this.timeoutPolicy = new DefaultLobbyTimeoutPolicy({ minutes: 1 });
+		this.timeoutPolicy.onTimeout(() => {
+			this.stop();
+		});
+
+		this.timeoutPolicy.trigger('lobbyCreated', undefined);
+
+		this.playerManager.onPlayerRemove((player, players) => {
+			this.timeoutPolicy.trigger('playerLeave', players.length);
+		});
+
+		this.playerManager.onPlayerAdd((player, players) => {
+			this.timeoutPolicy.trigger('playerJoined', players.length);
+		});
 		this.authenticationPolicy = AuthenticationPolicyFactory.getAuthenticationPolicy(settings);
 
 		this.gameManager.addGame(new SharedPixelCanvasInitializer(this));
@@ -165,15 +195,22 @@ export default class LobbyHandler extends CheckedNamespaceHandler<
 		this.startPlayerChangeEvents();
 	}
 
-	get generalInfo(): GeneralLobbyInfo {
-		return {
-			lobbyId: this.lobbyId,
-			name: this.lobbySettings.name,
-			maxPlayers: this.lobbySettings.maxPlayers,
-			isPrivate: this.lobbySettings.isPrivate,
-			authenticationPolicyType: this.lobbySettings.authenticationPolicy.name,
-			playerCount: this.players.length
-		};
+	public get gameRunning(): boolean {
+		return this.game !== null;
+	}
+
+	public get gameInitializing(): boolean {
+		return this.gameInitializer !== null;
+	}
+
+	public get gameState(): LobbyState {
+		if (this.gameRunning) {
+			return 'game-running';
+		} else if (this.gameInitializing) {
+			return 'game-initializing';
+		} else {
+			return 'lobby';
+		}
 	}
 
 	get players(): PlayerInfo[] {
@@ -202,9 +239,16 @@ export default class LobbyHandler extends CheckedNamespaceHandler<
 		return null;
 	}
 
-	public stop() {
-		this.chatHandler.remove();
-		this.remove();
+	get generalInfo(): GeneralLobbyInfo {
+		return {
+			lobbyId: this.lobbyId,
+			name: this.lobbySettings.name,
+			maxPlayers: this.lobbySettings.maxPlayers,
+			isPrivate: this.lobbySettings.isPrivate,
+			authenticationPolicyType: this.lobbySettings.authenticationPolicy.name,
+			playerCount: this.players.length,
+			game: this.gameInitializer?.name ?? null
+		};
 	}
 
 	public start() {
@@ -246,21 +290,34 @@ export default class LobbyHandler extends CheckedNamespaceHandler<
 		);
 	}
 
-	private async chooseGame(gameInitializer: GameInitializer<any>) {
-		// TODO refactor this
+	public stop() {
+		this.chatHandler.remove();
+		this.endListener.call();
+		this.remove();
+	}
 
-		this.game = gameInitializer;
+	onEnd(callback: () => void) {
+		this.endListener.addListener(callback);
+	}
+
+	private async chooseGame(gameInitializer: GameInitializer<any>) {
+		this.gameInitializer = gameInitializer;
 		this.namespace.emit('game-chosen', {
-			url: this.game.name
+			url: this.gameInitializer.name
 		});
 
 		try {
-			const config = await this.game.loadGameConfig(
+			const config = await this.gameInitializer.loadGameConfig(
 				this.playerManager.getPlayers(),
 				this.playerManager.getHost()
 			);
 
-			const game = await this.game.startGame(this, this.players, config);
+			this.game = await this.gameInitializer.startGame(this, this.players, config);
+			this.game!.onEnd(() => {
+				this.game = null;
+				this.gameInitializer = null;
+				this.namespace.emit('game-ended');
+			});
 		} catch (e) {
 			if (e instanceof ClientError) {
 				this.namespace.emit('error', {

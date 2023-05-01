@@ -1,0 +1,91 @@
+<script lang="ts">
+
+    import {fly} from "svelte/transition";
+    import {colorFromName, toHslString} from "$lib/components/chat/chatUtils";
+    import type {Message} from "$lib/components/chat/ChatFormatter";
+
+    export let message: Message;
+
+    function parseMessage(text: string) {
+        // TODO check for cross site scripting
+        let value = text;
+        value = value.replace(/\p{Emoji_Presentation}/ug, "<span class='text-xl'>$&</span>");
+        value = value.replace(/https?:[^)''"]+\.(?:jpg|jpeg|gif|png)((?:\?|\&)([\w]+)(?:\=|\&?)([\w+,.-]*))*/, "<img src='$&' class='chat-img'/>")
+        return value;
+    }
+
+</script>
+
+<article
+        class="message"
+        class:other-message={!message.self}
+        class:own-message={message.self}
+        in:fly={{ key: message.id, y: 20 }}
+>
+    {#if !message.self}
+        <p
+                class="text-xs font-bold mt-[-4px] select-none"
+                style="color: {toHslString(colorFromName(message.user))}"
+        >
+            {message.user}
+        </p>
+    {/if}
+    <p class="{!message.self ? 'mt-[-4px]' : ''} break-all">{@html parseMessage(message.message)}</p>
+    <p
+            class="absolute bottom-px right-1.5 text-xs font-semibold select-none"
+            class:other-message={!message.self}
+            class:own-message={message.self}
+    >
+        {new Date(message.time).toLocaleTimeString()}
+    </p>
+</article>
+
+
+<style lang="postcss">
+    .message {
+        @apply relative p-1 pb-3 rounded-xl max-w-[90%] text-sm break-words grow-0 min-w-[6rem];
+    }
+
+    article.own-message {
+        @apply bg-pink-600 justify-self-end self-end text-white;
+        border-top-right-radius: 0;
+    }
+
+    article.own-message::before {
+        content: '';
+        position: absolute;
+
+        top: 0;
+        right: -0.8em;
+        width: 0;
+        height: 0;
+
+        border-top: solid 0.9em theme('colors.pink.600');
+        border-right: solid 0.9em transparent;
+    }
+
+    article.other-message::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -0.8em;
+        width: 0;
+        height: 0;
+
+        border-top: solid 0.9em theme('colors.slate.200');
+        border-left: solid 0.9em transparent;
+    }
+
+    article.other-message {
+        @apply bg-slate-200;
+        border-top-left-radius: 0;
+    }
+
+    p.own-message {
+        @apply text-pink-800;
+    }
+
+    p.other-message {
+        @apply text-slate-700;
+    }
+</style>

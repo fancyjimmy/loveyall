@@ -4,6 +4,10 @@ import type { PlayerInfo } from '../lobby/types';
 export default class Player {
 	registered: boolean = false;
 
+	get isHost(): boolean {
+		return this.playerInfo.role === 'host';
+	}
+
 	constructor(public playerInfo: PlayerInfo, public socket: Socket | null) {}
 
 	get isConnected(): boolean {

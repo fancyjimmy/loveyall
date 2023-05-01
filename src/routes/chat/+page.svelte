@@ -58,7 +58,6 @@
         } catch (e) {
             alert("Could not create room");
             console.error(e);
-            return;
         }
 
 
@@ -96,55 +95,3 @@
     </div>
 </div>
 
-<style>
-    /* Make the scrollbar outset and darker */
-    .custom-scrollbar::-webkit-scrollbar {
-        width: 16px;
-        height: 12px;
-        background-color: #e6e6e6;
-    }
-
-    /* Make the handle outset */
-    .custom-scrollbar::-webkit-scrollbar-thumb {
-        background-color: #c2c2c2;
-        border: 4px outset #939393;
-        box-shadow: none;
-    }
-
-    /* Make the top of the handle outset */
-    .custom-scrollbar::-webkit-scrollbar-thumb:start {
-        border: 4px outset #939393;
-    }
-
-    /* Make the bottom of the handle outset */
-    .custom-scrollbar::-webkit-scrollbar-thumb:end {
-        border: 4px outset #939393;
-    }
-
-    .custom-scrollbar::-webkit-scrollbar-button:vertical:start:decrement {
-        height: 18px;
-        border: 4px outset #939393;
-    }
-
-    .custom-scrollbar::-webkit-scrollbar-button:vertical:end:increment {
-        height: 18px;
-        border: 4px outset #939393;
-    }
-
-
-    .custom-scrollbar::-webkit-scrollbar-track {
-        background-color: #e6e6e6;
-        border: 4px inset #939393;
-    }
-
-
-    .default-link {
-        color: blue;
-        text-decoration: underline;
-        cursor: pointer;
-    }
-
-    .default-link:visited {
-        color: #551A8B;;
-    }
-</style>

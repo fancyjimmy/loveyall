@@ -1,18 +1,17 @@
 <script lang="ts">
-    import {onMount} from "svelte";
-    import {Socket} from "socket.io-client";
-
+    import {onMount} from 'svelte';
+    import {Socket} from 'socket.io-client';
+    import {role} from "../../../../../routes/lobby/[lobbyId]/gameStore.js";
 
     let canvas: HTMLCanvasElement;
 
     export let socket: Socket;
 
     type Color = {
-        r: number,
-        g: number,
-        b: number,
+        r: number;
+        g: number;
+        b: number;
     };
-
 
     let width = 100;
     let height = 100;
@@ -25,7 +24,7 @@
             canvas.width = width;
             canvas.height = height;
 
-            canvas.addEventListener("mousedown", (event) => {
+            canvas.addEventListener('mousedown', (event) => {
                 let rect = canvas.getBoundingClientRect();
 
                 let x = (event.clientX - rect.left) * (canvas.width / rect.width);
@@ -46,7 +45,7 @@
     $: ctx = canvas?.getContext('2d');
 
     function listenToPixelChanges() {
-        socket.on("pixel-change", (x: number, y: number, color: Color) => {
+        socket.on('pixel-change', (x: number, y: number, color: Color) => {
             drawPixel(x, y, color);
         });
     }
@@ -55,7 +54,6 @@
         ctx.fillStyle = `rgb(${color.r}, ${color.g}, ${color.b})`;
         ctx.fillRect(x, y, 1, 1);
     }
-
 
     function setPixel(x: number, y: number, color: Color) {
         drawPixel(x, y, color);
@@ -74,20 +72,32 @@
     onMount(() => {
         getInitialImage();
         listenToPixelChanges();
-    })
-    let color = "#000000"
+    });
+    let color = '#000000';
 </script>
 
-{#if loading}
-    <p>Loading</p>
-{:else}
-    <input type="color" bind:value={color}>
-    <canvas width="{width}" height="{height}" bind:this={canvas}></canvas>
-{/if}
+<div class="bg-red-500 w-full h-full">
+    {#if loading}
+        <p>Loading</p>
+    {:else}
+
+        {#if $role === "host"}
+            <button on:click={() => {
+                socket.emit("pixel:end", (response) => {
+                    console.log(response);
+                });
+            }}>End
+            </button>
+        {/if}
+        <input type="color" bind:value={color}/>
+        <canvas {width} {height} bind:this={canvas}/>
+    {/if}
+</div>
 
 <style>
     canvas {
         height: 400px;
+        background-color: gray;
         image-rendering: pixelated;
     }
 </style>

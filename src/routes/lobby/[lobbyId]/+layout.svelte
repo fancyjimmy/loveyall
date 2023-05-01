@@ -5,15 +5,16 @@
     import type {GeneralLobbyInfo, Response} from '../../../../src-socket-io/lib/handler/lobby/manage/types';
     import {getLobbyConnection, getSessionStorage, setSessionStorage} from '../../../lib/lobby/LobbyConnection';
     import Chat from '$lib/components/chat/Chat.svelte';
-    import ServerMessage from './ServerMessage.svelte';
-    import Icon from '@iconify/svelte';
-    import {dev} from '$app/environment';
+    import ServerMessage from '../../../lib/components/lobby/lobbyPage/ServerMessage.svelte';
     import type {GeneralPlayerInfo, PlayerInfo} from '../../../../src-socket-io/lib/handler/lobby/types';
     import type {JoinInfo} from '../../../../src-socket-io/lib/handler/lobby/LobbyHandler';
-    import PlayerListComponent from "./PlayerListComponent.svelte";
+    import PlayerListComponent from "../../../lib/components/lobby/lobbyPage/PlayerListComponent.svelte";
     import Dialog from "$lib/components/lobby/Dialog.svelte";
-    import LoadingScreen from "./LoadingScreen.svelte";
-    import ErrorScreen from "./ErrorScreen.svelte";
+    import LoadingScreen from "../../../lib/components/lobby/lobbyPage/LoadingScreen.svelte";
+    import ErrorScreen from "../../../lib/components/lobby/lobbyPage/ErrorScreen.svelte";
+    import LobbySettingsComponent from "../../../lib/components/lobby/lobbyPage/LobbySettingsComponent.svelte";
+    import CondensedMessage from "../../../lib/components/lobby/lobbyPage/CondensedMessage.svelte";
+    import {gameName, role} from "./gameStore";
 
     export let data;
 
@@ -74,6 +75,12 @@
         }
     }
 
+
+    function setGame(name: string | null) {
+        setSessionStorage(data.lobbyId, "game", name === null ? "" : name);
+        $gameName = name;
+    }
+
     async function loadData(socket: Socket): Promise<JoinInfo> {
         return new Promise<JoinInfo>((resolve, reject) => {
             socket.emit('joined', (data) => {
@@ -101,6 +108,7 @@
 
         playerInfos.forEach((player) => {
             if (player.username === self.username) {
+                $role = player.role;
                 self = {
                     username: player.username,
                     role: player.role
@@ -116,6 +124,14 @@
         });
 
 
+        socket.on("game-chosen", (game: { url: string }) => {
+            setGame(game.url);
+        });
+
+        socket.on("game-ended", () => {
+            setGame(null);
+        });
+
         socket.on('disconnect', () => {
             loadingState = 'error';
             error = 'Disconnected';
@@ -127,16 +143,17 @@
 
 
     let error = null;
+
     onMount(async () => {
         io.on('error', (err) => {
             loadingState = 'error';
             error = err.message;
         });
-        let token = getSessionStorage('sessionKey');
+        let token = getSessionStorage(data.lobbyId, 'sessionKey');
         if (!token) {
             try {
                 let authToken = await join();
-                setSessionStorage('sessionKey', authToken);
+                setSessionStorage(data.lobbyId, 'sessionKey', authToken);
                 token = authToken;
             } catch (e) {
                 loadingState = 'error';
@@ -149,13 +166,14 @@
 
         try {
             const initData: JoinInfo = await loadData(socket);
-            lobbyName = initData.name;
+            joinInfo = initData;
             players = initData.players;
+            $gameName = initData.game;
+            $role = initData.role;
             self = {
                 username: initData.username,
                 role: initData.role
             };
-            lobbyId = initData.lobbyId;
             chatRoomId = initData.chatRoomId;
             maxPlayers = initData.maxPlayers;
 
@@ -168,11 +186,8 @@
     });
 
     let lobbyId = '';
-    let lobbyName;
     let username = '';
 
-    let link = window.location.href;
-    let copied = false;
 
     function kick(player: GeneralPlayerInfo) {
         socket.emit('kick', player.username, (response: Response<null>) => {
@@ -182,14 +197,6 @@
         });
     }
 
-    function copyLink() {
-        if (copied) return;
-        navigator.clipboard.writeText(link);
-        copied = true;
-        setTimeout(() => {
-            copied = false;
-        }, 1000);
-    }
 
     let chatRoomId;
     let dialog;
@@ -209,6 +216,8 @@
             dialog.open();
         });
     }
+
+    let joinInfo;
 </script>
 
 <div class="w-screen h-screen">
@@ -220,48 +229,20 @@
         {:else}
             <div class="w-full h-full bg-slate-800 relative flex">
                 <div class="flex-[3] flex flex-col">
-                    <div class="flex-1 grid grid-cols-1 relative">
-                        <div class="flex flex-col">
-                            <div class="text-2xl p-2 text-white font-bold flex justify-between items-center w-full">
-                                <h2>{lobbyName} <span class="text-xs text-slate-400">{players.length}
-                                    /{maxPlayers}</span></h2>
-
-                                <div class="flex items-center">
-                                    {#if dev}
-                                        <!-- TODO Remove when prod -->
-                                        <a
-                                                class="text-4xl p-2 hover:bg-slate text-lime-600 duration-200"
-                                                href={link}
-                                                target="_blank"
-                                        >
-                                            <Icon icon="material-symbols:add"/>
-                                        </a>
-                                    {/if}
-
-                                    <button
-                                            class="text-4xl p-2 hover:bg-slate {copied
-									? 'text-sky-500'
-									: 'text-white'} duration-200"
-                                            on:click={copyLink}
-                                    >
-                                        <Icon icon="material-symbols:content-copy"/>
-                                    </button>
-                                </div>
-                            </div>
-
-                            <div class="flex-1">
-                                <slot/>
-                            </div>
-
-                        </div>
+                    <div class="flex-1 relative">
+                        <slot/>
                     </div>
                 </div>
 
                 <div class="flex-1 flex flex-col">
-                    <div class="bg-slate-800 p-2 top-2 left-2 w-full h-48 overflow-y-auto scrollbar-hidden">
+                    <div class="p-2">
 
-                        <PlayerListComponent players={players} {self}
-                                             on:kick={(event) => {kick(event.detail)}}/>
+                        <LobbySettingsComponent {self} {joinInfo}></LobbySettingsComponent>
+                        <div class="bg-slate-800 w-full mt-1">
+
+                            <PlayerListComponent players={players} {self} maxPlayers={maxPlayers}
+                                                 on:kick={(event) => {kick(event.detail)}}/>
+                        </div>
                     </div>
 
                     <Chat
@@ -273,6 +254,7 @@
 						if (message.extra?.server === true) {
 							return ServerMessage;
 						}
+                        return CondensedMessage;
 					}}
                     >
                         <p slot="icon"/>
