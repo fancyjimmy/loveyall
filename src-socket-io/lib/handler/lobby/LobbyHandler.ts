@@ -307,12 +307,19 @@ export default class LobbyHandler extends CheckedNamespaceHandler<
 			url: this.gameInitializer.name
 		});
 
+		this.playerManager.players.forEach((player) => {
+			player.setGameState('initializing');
+		});
+
 		try {
 			const config = await this.gameInitializer.loadGameConfig(
 				this.playerManager.players,
 				this.playerManager.getHost()
 			);
 
+			this.playerManager.players.forEach((player) => {
+				player.setGameState('playing');
+			});
 			this.game = await this.gameInitializer.startGame(this, this.playerManager.players, config);
 			this.game!.onEnd(() => {
 				this.game = null;

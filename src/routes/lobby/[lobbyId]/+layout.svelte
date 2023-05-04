@@ -51,7 +51,7 @@
                 if (response.success) {
                     resolve(response.data);
                 } else {
-                    reject(response.message);
+                    reject(response);
                 }
             });
         });
@@ -91,7 +91,7 @@
                 reject(data);
             });
             setTimeout(() => {
-                reject('timeout');
+                reject({message: 'timeout'});
             }, 1000);
         });
     }

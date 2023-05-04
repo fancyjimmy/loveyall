@@ -13,11 +13,34 @@ export default class Player {
 	// TODO unclean refactor Listener, dry it
 	private disconnectListener = new Listener();
 
+	private gameState: 'initializing' | 'playing' | 'lobby' = 'lobby';
+
 	get isConnected(): boolean {
 		return this.socket !== null;
 	}
+
 	private reconnectListener = new Listener();
 	private timeoutListener = new Listener();
+
+	get state(): 'initializing' | 'playing' | 'lobby' {
+		return this.gameState;
+	}
+
+	get isPlaying(): boolean {
+		return this.gameState === 'playing';
+	}
+
+	get isWaiting(): boolean {
+		return this.gameState === 'lobby';
+	}
+
+	get isInitializing(): boolean {
+		return this.gameState === 'initializing';
+	}
+
+	public setGameState(state: 'initializing' | 'playing' | 'lobby') {
+		this.gameState = state;
+	}
 
 	constructor(
 		public readonly timeout: PlayerTimeoutPolicy,

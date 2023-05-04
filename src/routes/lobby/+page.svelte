@@ -16,6 +16,8 @@
         if (passwordAuth) {
             authenticationPolicy['password'] = password;
         }
+        console.log(io);
+
         io.emit(
             'lobby:create',
             {
@@ -25,6 +27,7 @@
                 authenticationPolicy: authenticationPolicy
             },
             (response: CreatedClientReturn) => {
+
                 if (response.success) {
                     goto('/lobby/' + response.data.lobbyId);
                 } else {
@@ -111,7 +114,7 @@
                 </div>
             {/if}
             <button
-                    on:click|preventDefault={createRoom}
+                    on:click={createRoom}
                     class="absolute text-white bg-pink-600 p-2 rounded hover:bg-pink-500 duration-200 bottom-5 mx-0 inset-x-5"
             >Create
             </button>

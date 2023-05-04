@@ -195,8 +195,8 @@ export default class PlayerManager {
 	}
 
 	private deletePlayer(playerInfo: PlayerInfo) {
-		this.rolePolicy.setNextHost(this.#players, playerInfo);
 		this.#players = this.#players.filter((p) => p.playerInfo !== playerInfo);
+		this.rolePolicy.setNextHost(this.#players, playerInfo);
 		this.playerChangeListener.call(this.playerInfos);
 		this.playerRemoveListener.call(playerInfo, this.playerInfos);
 	}

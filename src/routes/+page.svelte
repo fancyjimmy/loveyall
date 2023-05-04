@@ -10,11 +10,47 @@
             game = game;
         }, 1000);
     }
+
+
+    let list = ["Südostengland",
+        "Cote d'Azur",
+        "Barcelona",
+        "Madrid",
+        "Neckarregion",
+        "Rhein-Main-Region",
+        "München Südbayern",
+        "Drittes Italien",
+        "Oö. Zentralraum, Salzburg",
+        "Slowenien Nordkroatien",
+        "38 Belgrad Novisad",
+        "Plovdiv",
+        "Siebenbürgen",
+        "Kisalfold",
+        "Mittel u. Transdanubien",
+        "Cottbus",
+        "Bratislava",
+        "Cork",
+        "Helsinki  Espo",
+        "Öresundregion",
+        "Stockholm"];
 </script>
 
 <h1>Uno</h1>
+<ul>
+    <li><a href="/lobby">Lobby</a></li>
+    <li><a href="/chat">Chat</a></li>
+    <li><a href="/general">General</a></li>
+</ul>
 
+<!-- show iframe of google search for every list item -->
 
+<div class="flex h-screen w-screen overflow-x-auto">
+    {#each list as item}
+        <a href="https://www.google.com/search?q={encodeURI('Karte ' + item)}" class="bg-red-500 p-2 link"
+           target="_blank">{item}</a>
+    {/each}
+</div>
+<!--
 <div class="game">
     <div class="players">
         {#each game.players as player }
@@ -65,17 +101,23 @@
 
 
 </div>
+-->
 
 <style>
-    .game{
+    .link:visited {
+        background-color: blue;
+    }
+
+    .game {
         display: flex;
         gap: 1em;
         align-items: center;
     }
 
-    .players{
+    .players {
         flex: 1;
     }
+
     ul {
         list-style: none;
         padding: 0;

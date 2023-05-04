@@ -62,6 +62,7 @@
     }
 
     function setPixel(x: number, y: number, color: Color | null) {
+        if (colorMode === 'erase') color = null;
         drawPixel(x, y, color);
         socket.emit('pixel:updatePixel', x, y, color);
     }
@@ -118,6 +119,7 @@
     $: realCanvasWidth = container?.clientWidth - 12 ?? 0;
 
     let container: HTMLDivElement;
+    let colorMode: 'color' | 'erase' = 'color';
 </script>
 
 <div class="w-full h-full pixelbackground bg-sky-400 pixel-font text-xl">
@@ -153,6 +155,14 @@
 								drawingMode = drawingMode === 'quick' ? 'single' : 'quick';
 							}}
                                 class="p-3 bordered-thin bg-sky-500 w-full">{drawingMode}</button
+                        >
+                        <button
+                                on:click={() => {
+								colorMode = colorMode === 'color' ? 'erase' : 'color';
+							}}
+                                class="p-3 bordered-thin {colorMode === 'color' ? 'color-mode' : 'no-opacity'} w-full"
+                                style="--color: {color}"
+                        ><span class="contrasting">{colorMode}</span></button
                         >
                         <button on:click={download} class="p-3 bottom-3 absolute hover:text-blue-700 duration-200">
                             Download
@@ -201,6 +211,24 @@
             background-position: 100% 100%;
         }
     }
+
+    .no-opacity {
+        background-image: url('/no-opacity.png');
+        --pixelsize: 32;
+        background-size: calc(var(--pixelsize) * 2px);
+        image-rendering: pixelated;
+    }
+
+    .color-mode {
+        --color: #1000f5;
+        background-color: var(--color);
+    }
+
+    .color-model span.contrasting {
+        mix-blend-mode: difference;
+        color: chocolate;
+    }
+
 
     .quick-mode {
         @apply bg-green-500;
