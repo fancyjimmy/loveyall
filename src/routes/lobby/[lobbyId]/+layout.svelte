@@ -180,6 +180,7 @@
             players = initData.players;
             $gameName = initData.game;
             $role = initData.role;
+            // TODO FIX THE ZOD OBJECT TO ENUM
             $playerState = initData.state || "lobby";
             self = {
                 username: initData.username,
@@ -238,14 +239,14 @@
         {:else if loadingState === 'error'}
             <ErrorScreen {error}></ErrorScreen>
         {:else}
-            <div class="w-full h-full bg-slate-800 relative flex">
-                <div class="flex-[3] flex flex-col">
-                    <div class="flex-1 relative">
+            <div class="w-full h-full bg-slate-800 relative grid grid-cols-[3fr,1fr]">
+                <div class="flex flex-col">
+                    <div class="h-full max-w-full relative overflow-auto scrollbar-hidden">
                         <slot/>
                     </div>
                 </div>
 
-                <div class="flex-1 flex flex-col">
+                <div class="flex flex-col">
                     <div class="p-2">
 
                         <LobbySettingsComponent {self} {joinInfo}></LobbySettingsComponent>

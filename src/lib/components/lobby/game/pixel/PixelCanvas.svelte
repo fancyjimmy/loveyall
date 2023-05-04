@@ -62,6 +62,8 @@
     }
 
     function setPixel(x: number, y: number, color: Color | null) {
+        let rgb = ctx.getImageData(x, y, 1, 1).data;
+        if (rgb[0] === color?.r && rgb[1] === color?.g && rgb[2] === color?.b) return;
         if (colorMode === 'erase') color = null;
         drawPixel(x, y, color);
         socket.emit('pixel:updatePixel', x, y, color);
@@ -115,26 +117,28 @@
         link.click();
     }
 
-    $: realCanvasHeight = container?.clientHeight - 12 ?? 0;
-    $: realCanvasWidth = container?.clientWidth - 12 ?? 0;
-
     let container: HTMLDivElement;
     let colorMode: 'color' | 'erase' = 'color';
+
+
+    $: aspectRatio = width / height;
+
+    let realHeight = 450;
 </script>
 
-<div class="w-full h-full pixelbackground bg-sky-400 pixel-font text-xl">
+<div class="w-full h-screen pixelbackground bg-sky-400 pixel-font text-xl">
     {#if loading}
         <div class="w-full h-full flex items-center justify-center">
             <p>Loading...</p>
         </div>
     {:else}
-        <div class="flex w-full h-full flex-col gap-2">
+        <div class="flex w-full  flex-col gap-2">
             <div class="p-8">
                 <div class="bg-white bordered p-2 font-semibold text-2xl">Pixel Draw Together</div>
             </div>
 
-            <div class="flex-1 flex p-8 pt-0">
-                <div class="w-48 flex flex-col gap-3">
+            <div class="flex-1 grid grid-cols-[12rem,1fr] p-8 pt-0">
+                <div class="flex flex-col gap-3">
                     {#if $role === 'host'}
                         <button
                                 class="bordered bg-red-500 p-3 hover:bg-red-700 duration-200"
@@ -161,29 +165,31 @@
 								colorMode = colorMode === 'color' ? 'erase' : 'color';
 							}}
                                 class="p-3 bordered-thin {colorMode === 'color' ? 'color-mode' : 'no-opacity'} w-full"
-                                style="--color: {color}"
-                        ><span class="contrasting">{colorMode}</span></button
+                                style="--color: {color}"><span class="contrasting">{colorMode}</span></button
                         >
-                        <button on:click={download} class="p-3 bottom-3 absolute hover:text-blue-700 duration-200">
+                        <button
+                                on:click={download}
+                                class="p-3 bottom-3 absolute hover:text-blue-700 duration-200"
+                        >
                             Download
                         </button>
                     </div>
                 </div>
 
-                <div class="flex-1 flex items-center justify-center" bind:this={container}>
-                    <canvas
-                            {width}
-                            {height}
-                            bind:this={canvas}
-                            style="--pixelsize: {Math.min(
-							realCanvasHeight / height,
-							realCanvasWidth / width
-						)}; height: {Math.min(realCanvasHeight, realCanvasWidth)}px; width: {Math.min(
-							realCanvasHeight,
-							realCanvasWidth
-						)}px;"
-                            class="bordered"
-                    />
+                <div class="relative" bind:this={container}>
+                    <div class="overflow-scroll h-full w-full">
+
+                        <canvas
+                                {width}
+                                {height}
+                                bind:this={canvas}
+                                style="--pixelsize: {realHeight/ height}; height: {realHeight}px; width: {realHeight * aspectRatio}px;"
+                                class="bordered"
+                        />
+                    </div>
+                    <div class="absolute bottom-0 inset-x-0">
+                        <input type="range" bind:value={realHeight} min="200" max="2000" step="5" class="w-full">
+                    </div>
                 </div>
             </div>
         </div>
@@ -194,7 +200,6 @@
     @import url('https://fonts.googleapis.com/css2?family=DotGothic16&display=swap');
 
     canvas {
-        object-fit: contain;
         margin: 0px;
         box-sizing: content-box;
         background-image: url('/no-opacity.png');
@@ -228,7 +233,6 @@
         mix-blend-mode: difference;
         color: chocolate;
     }
-
 
     .quick-mode {
         @apply bg-green-500;

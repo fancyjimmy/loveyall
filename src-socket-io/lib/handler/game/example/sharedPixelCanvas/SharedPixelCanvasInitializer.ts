@@ -18,12 +18,22 @@ export default class SharedPixelCanvasInitializer extends GameInitializer<
 
 	loadGameConfig(sockets: Player[], host: Player): Promise<SharedPixelCanvasSettings> {
 		return new Promise<SharedPixelCanvasSettings>((resolve, reject) => {
-			setTimeout(() => {
-				resolve({
-					width: 30,
-					height: 30
+			if (host.socket) {
+				host.socket.once('createCanvas', (settings: SharedPixelCanvasSettings) => {
+					resolve(settings);
 				});
-			}, 5000);
+			}
+
+			host.onReconnect(() => {
+				// socket has to be non-null here, cause it just reconnected
+				host.socket!.once('createCanvas', (settings: SharedPixelCanvasSettings) => {
+					resolve(settings);
+				});
+			});
+
+			host.onTimeout(() => {
+				reject('Canceled');
+			});
 		});
 	}
 }

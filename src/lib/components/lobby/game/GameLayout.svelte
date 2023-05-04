@@ -1,20 +1,13 @@
 <script lang="ts">
 
-    import type {Socket} from "socket.io";
-    import {SvelteComponent} from "svelte";
-    import SharedPixelCanvas from "./pixel/SharedPixelCanvas.svelte";
 
+    import {getGame} from "./GameBundle";
+    import type {Socket} from "socket.io-client";
+
+    export let name: string;
     export let socket: Socket;
-    export let name: string | null;
 
-    console.log(name);
-
-    const gameMap = new Map<string, SvelteComponent>();
-
-    gameMap.set("pixel", SharedPixelCanvas);
-
-
-    $: game = gameMap.get(name ?? "");
+    $: game = getGame(name);
 </script>
 
 

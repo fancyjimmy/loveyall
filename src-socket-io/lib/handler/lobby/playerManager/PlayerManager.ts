@@ -64,7 +64,7 @@ export default class PlayerManager {
 
 		console.log('bind  ' + player.playerInfo.username);
 		if (player.isConnected) {
-            throw new ClientError('You are already connected');
+			throw new ClientError('You are already connected');
 		}
 
 		player.updateSocket(socket);
