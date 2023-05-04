@@ -231,6 +231,7 @@
 				}}
                     on:selected={(event) => {
 					sendMessage(event.detail.images.original.url);
+                    gifBrowser = false;
 				}}
                     class="absolute bottom-28 right-5 h-96 w-96 bg-slate-700 rounded-lg border-2 border-slate-800  p-2 scrollbar-hidden"
             />

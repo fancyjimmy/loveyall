@@ -14,7 +14,7 @@
     import ErrorScreen from "../../../lib/components/lobby/lobbyPage/ErrorScreen.svelte";
     import LobbySettingsComponent from "../../../lib/components/lobby/lobbyPage/LobbySettingsComponent.svelte";
     import CondensedMessage from "../../../lib/components/lobby/lobbyPage/CondensedMessage.svelte";
-    import {gameName, role} from "./gameStore";
+    import {gameName, playerState, role} from "../../../lib/components/lobby/gameStore";
 
     export let data;
 
@@ -125,10 +125,20 @@
 
 
         socket.on("game-chosen", (game: { url: string }) => {
+            $playerState = "initializing";
             setGame(game.url);
         });
 
+        socket.on("game-started", () => {
+            $playerState = "playing";
+        });
+
+        socket.on("game-canceled", () => {
+            $playerState = "lobby";
+        });
+
         socket.on("game-ended", () => {
+            $playerState = "lobby";
             setGame(null);
         });
 
@@ -170,6 +180,7 @@
             players = initData.players;
             $gameName = initData.game;
             $role = initData.role;
+            $playerState = initData.state || "lobby";
             self = {
                 username: initData.username,
                 role: initData.role

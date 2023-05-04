@@ -1,7 +1,7 @@
 <script lang="ts">
     import {onMount} from 'svelte';
     import {Socket} from 'socket.io-client';
-    import {role} from '../../../../../routes/lobby/[lobbyId]/gameStore.js';
+    import {role} from '../../gameStore.js';
 
     let canvas: HTMLCanvasElement;
 
@@ -137,7 +137,7 @@
                 <div class="w-48 flex flex-col gap-3">
                     {#if $role === 'host'}
                         <button
-                                class="bordered bg-red-500 p-3 hover:bg-orange-500 duration-200"
+                                class="bordered bg-red-500 p-3 hover:bg-red-700 duration-200"
                                 on:click={() => {
 								socket.emit('pixel:end', (response) => {
 									console.log(response);

@@ -58,5 +58,6 @@ export type LobbyClientEventFunctions = {
 export const ZJoinInfo = ZLobbyInfo.extend({
 	players: z.array(ZGeneralPlayerInfo),
 	role: z.nativeEnum(LobbyRole),
-	username: z.string()
+	username: z.string(),
+	state: z.string()
 });

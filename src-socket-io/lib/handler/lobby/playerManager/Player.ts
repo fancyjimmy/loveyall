@@ -3,6 +3,7 @@ import type { PlayerInfo } from '../types';
 import type PlayerTimeoutPolicy from '../policy/time/player/PlayerTimeoutPolicy';
 import { Listener } from '../../../utilities/Listener';
 
+export type PlayerState = 'initializing' | 'playing' | 'lobby';
 export default class Player {
 	registered: boolean = false;
 
@@ -13,7 +14,7 @@ export default class Player {
 	// TODO unclean refactor Listener, dry it
 	private disconnectListener = new Listener();
 
-	private gameState: 'initializing' | 'playing' | 'lobby' = 'lobby';
+	private gameState: PlayerState = 'lobby';
 
 	get isConnected(): boolean {
 		return this.socket !== null;
@@ -22,7 +23,7 @@ export default class Player {
 	private reconnectListener = new Listener();
 	private timeoutListener = new Listener();
 
-	get state(): 'initializing' | 'playing' | 'lobby' {
+	get state(): PlayerState {
 		return this.gameState;
 	}
 
@@ -38,8 +39,13 @@ export default class Player {
 		return this.gameState === 'initializing';
 	}
 
-	public setGameState(state: 'initializing' | 'playing' | 'lobby') {
+	public setGameState(state: PlayerState) {
+		if (!['initializing', 'playing', 'lobby'].includes(state)) throw new Error('Invalid state');
 		this.gameState = state;
+	}
+
+	public getGameState(): PlayerState {
+		return this.gameState;
 	}
 
 	constructor(

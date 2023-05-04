@@ -59,12 +59,12 @@ export default class PlayerManager {
 		const player = this.getPlayerBySession(socket.handshake.auth.token);
 		if (!player) {
 			// not found by session storage
-			throw new ClientError('Player not found');
+			throw new ClientError('You timed out');
 		}
 
 		console.log('bind  ' + player.playerInfo.username);
 		if (player.isConnected) {
-			throw new ClientError('Player already connected');
+            throw new ClientError('You are already connected');
 		}
 
 		player.updateSocket(socket);

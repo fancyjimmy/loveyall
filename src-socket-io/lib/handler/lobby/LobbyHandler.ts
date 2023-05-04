@@ -80,7 +80,6 @@ export default class LobbyHandler extends CheckedNamespaceHandler<
 			ZLobbyEvents,
 			{
 				joined: (callback, socket) => {
-					console.log(socket.data);
 					callback({
 						username: socket.data!.player!.username,
 						role: socket.data!.player!.role,
@@ -91,7 +90,8 @@ export default class LobbyHandler extends CheckedNamespaceHandler<
 						name: this.lobbySettings.name,
 						maxPlayers: this.lobbySettings.maxPlayers,
 						authenticationPolicy: this.lobbySettings.authenticationPolicy,
-						game: this.gameInitializer?.name ?? null
+						game: this.gameInitializer?.name ?? null,
+						state: this.playerManager.getPlayerFromSocket(socket)?.getGameState() ?? 'lobby'
 					});
 				},
 				changeSettings: (data, io) => {},
@@ -312,12 +312,18 @@ export default class LobbyHandler extends CheckedNamespaceHandler<
 		});
 
 		try {
+			const players = this.playerManager.players;
+
+			players.forEach((player) => {
+				player.setGameState('initializing');
+			});
 			const config = await this.gameInitializer.loadGameConfig(
-				this.playerManager.players,
+				players,
 				this.playerManager.getHost()
 			);
 
-			this.playerManager.players.forEach((player) => {
+			this.namespace.emit('game-started');
+			players.forEach((player) => {
 				player.setGameState('playing');
 			});
 			this.game = await this.gameInitializer.startGame(this, this.playerManager.players, config);
@@ -327,7 +333,10 @@ export default class LobbyHandler extends CheckedNamespaceHandler<
 				this.namespace.emit('game-ended');
 			});
 		} catch (e) {
-			if (e instanceof ClientError) {
+			if (e === 'cancelled') {
+				this.game = null;
+				this.namespace.emit('game-canceled');
+			} else if (e instanceof ClientError) {
 				this.namespace.emit('error', {
 					message: e.message
 				});
