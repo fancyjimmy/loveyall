@@ -3,7 +3,6 @@ import type { Server as HttpServer } from 'http';
 
 import { ServerChatHandler, ServerChatRoomHandler } from './lib/handler/chat';
 import logger from './lib/Logger';
-import { DebugHandler } from './lib/handler/debug';
 import HandlerManager from './HandlerManager';
 import LobbyManagerHandler from './lib/handler/lobby/manage/LobbyManagerHandler';
 
@@ -20,8 +19,8 @@ export default function injectSocketIO(server: HttpServer) {
 
 	const handlerManager = new HandlerManager([
 		new ServerChatRoomHandler(io),
-		new LobbyManagerHandler(io),
-		new DebugHandler(io)
+		new LobbyManagerHandler(io)
+		//new DebugHandler(io)
 	]);
 
 	const serverChatHandler = new ServerChatHandler(io, 'general', false);

@@ -1,3 +1,5 @@
+<!--
+
 <script lang="ts">
     import {dev} from "$app/environment";
     import DebugConsole from "$lib/components/debug/DebugConsole.svelte";
@@ -40,3 +42,4 @@
         display: none;
     }
 </style>
+-->
