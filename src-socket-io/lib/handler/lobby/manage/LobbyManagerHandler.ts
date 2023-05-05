@@ -1,9 +1,9 @@
-import type {Server} from 'socket.io';
-import {type GeneralLobbyInfo, ZGeneralLobbyInfo, ZLobbyCreationSettings, ZLobbyJoinOption} from './types';
-import {z} from 'zod';
-import {createResponseSchema} from '../types';
-import LobbyHandler from '../LobbyHandler';
-import CheckedServerHandler from '../../../socket/CheckedServerHandler';
+import type { Server } from "socket.io";
+import { type GeneralLobbyInfo, ZGeneralLobbyInfo, ZLobbyCreationSettings, ZLobbyJoinOption } from "./types";
+import { z } from "zod";
+import { createResponseSchema } from "../types";
+import LobbyHandler from "../LobbyHandler";
+import CheckedServerHandler from "../../../socket/CheckedServerHandler";
 
 /*
 Lobby Making Description
@@ -65,7 +65,7 @@ export default class LobbyManagerHandler extends CheckedServerHandler<
 					const lobbyId = joinOptions.lobbyId;
 					const lobby = this.lobbyMap.get(lobbyId);
 					if (!lobby) {
-                        cb({ message: 'LOBBY NOT FOUND', success: false });
+            cb({ message: 'LOBBY NOT FOUND', success: false });
 						return;
 					}
 
