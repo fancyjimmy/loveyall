@@ -1,9 +1,9 @@
 import type { Socket } from 'socket.io';
 import type { PlayerInfo } from '../types';
+import { PlayerState } from '../types';
 import type PlayerTimeoutPolicy from '../policy/time/player/PlayerTimeoutPolicy';
 import { Listener } from '../../../utilities/Listener';
 
-export type PlayerState = 'initializing' | 'playing' | 'lobby';
 export default class Player {
 	registered: boolean = false;
 
@@ -14,7 +14,7 @@ export default class Player {
 	// TODO unclean refactor Listener, dry it
 	private disconnectListener = new Listener();
 
-	private gameState: PlayerState = 'lobby';
+	private gameState: PlayerState = PlayerState.LOBBY;
 
 	get isConnected(): boolean {
 		return this.socket !== null;

@@ -10,7 +10,6 @@
     $: game = getGame(name);
 </script>
 
-
 {#if game !== undefined}
     <svelte:component this={game} socket={socket}/>
 {:else}

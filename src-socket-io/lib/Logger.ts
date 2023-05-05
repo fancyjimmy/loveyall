@@ -1,37 +1,38 @@
 export type ConsoleListener = (type: string | symbol, time: Date, ...args: any[]) => void;
 
-
 export class Logger {
-    private listeners: ConsoleListener[] = [];
-    public showLogs = true;
-    proxy(console: Console) {
-        let listeners = this.listeners
-        let self = this;
-        return new Proxy(console, {
-            get(target: typeof console, methodName: keyof typeof console, receiver) {
-                // get origin method
-                const originMethod = target[methodName];
+	public showLogs = true;
+	private listeners: ConsoleListener[] = [];
 
-                return function (...args: any[]) {
-                    listeners.forEach(listener => {
-                        listener(methodName, new Date(), ...args.map(arg => JSON.stringify(arg)));
-                    });
-                    if (self.showLogs) {
-                        // @ts-ignore
-                        return originMethod.apply(this, args);
-                    }
-                };
-            }
-        });
-    }
+	proxy(console: Console) {
+		let listeners = this.listeners;
+		let self = this;
+		return new Proxy(console, {
+			get(target: typeof console, methodName: keyof typeof console, receiver) {
+				// get origin method
+				const originMethod = target[methodName];
 
-    listen(consoleListener: ConsoleListener) {
-        this.listeners.push(consoleListener);
-    }
+				return function (...args: any[]) {
+					listeners.forEach((listener) => {
+						listener(methodName, new Date(), ...args.map((arg) => JSON.stringify(arg)));
+					});
 
-    clear() {
-        this.listeners = [];
-    }
+					if (self.showLogs) {
+						// @ts-ignore
+						return originMethod.apply(this, args);
+					}
+				};
+			}
+		});
+	}
+
+	listen(consoleListener: ConsoleListener) {
+		this.listeners.push(consoleListener);
+	}
+
+	clear() {
+		this.listeners = [];
+	}
 }
 
 const logger = new Logger();

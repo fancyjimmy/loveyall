@@ -3,6 +3,7 @@ import PixelCanvas from './pixel/PixelCanvas.svelte';
 import PixelCanvasInit from './pixel/PixelCanvasInit.svelte';
 
 export type GameDescription = {
+	id: string;
 	name: string;
 	description: string;
 	icon: string;
@@ -28,27 +29,30 @@ export class GameBundle {
 	}
 }
 
-export const gameBundles = new Map<string, GameBundle>();
+export const gameBundles: GameBundle[] = [];
 
-gameBundles.set(
-	'pixel',
+gameBundles.push(
 	new GameBundle(null, PixelCanvas, PixelCanvasInit, {
+		id: 'pixel',
 		name: 'Pixel',
-		description: 'Draw a pixel art with your friends!',
+		description: 'Draw pixel art with your friends!',
 		icon: 'https://cdn.discordapp.com/attachments/820416613813063976/820416648839897876/unknown.png',
-		preview:
-			'https://cdn.discordapp.com/attachments/820416613813063976/820416648839897876/unknown.png'
+		preview: '/games/pixel.png'
 	})
 );
 
 export function getGame(name: string): Component | null {
-	return gameBundles.get(name)?.gameScreen ?? null;
+	return gameBundles.find((bundle) => bundle.settings.id === name)?.gameScreen ?? null;
 }
 
 export function getGameInitializer(name: string): Component | null {
-	return gameBundles.get(name)?.initializingScreen ?? null;
+	return gameBundles.find((bundle) => bundle.settings.id === name)?.initializingScreen ?? null;
 }
 
 export function getGameWaitingScreen(name: string): Component | null {
-	return gameBundles.get(name)?.waitingScreen ?? null;
+	return gameBundles.find((bundle) => bundle.settings.id === name)?.waitingScreen ?? null;
+}
+
+export function getAllGames(): GameDescription[] {
+	return Array.from(gameBundles.values()).map((bundle) => bundle.settings);
 }

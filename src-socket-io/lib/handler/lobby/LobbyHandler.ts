@@ -4,6 +4,7 @@ import {
 	createResponseSchema,
 	type LobbyClientEventFunctions,
 	type PlayerInfo,
+	PlayerState,
 	ZGeneralPlayerInfo,
 	ZJoinInfo
 } from './types';
@@ -91,7 +92,8 @@ export default class LobbyHandler extends CheckedNamespaceHandler<
 						maxPlayers: this.lobbySettings.maxPlayers,
 						authenticationPolicy: this.lobbySettings.authenticationPolicy,
 						game: this.gameInitializer?.name ?? null,
-						state: this.playerManager.getPlayerFromSocket(socket)?.getGameState() ?? 'lobby'
+						state:
+							this.playerManager.getPlayerFromSocket(socket)?.getGameState() ?? PlayerState.LOBBY
 					});
 				},
 				changeSettings: (data, io) => {},
@@ -307,15 +309,10 @@ export default class LobbyHandler extends CheckedNamespaceHandler<
 			url: this.gameInitializer.name
 		});
 
-		this.playerManager.players.forEach((player) => {
-			player.setGameState('initializing');
-		});
-
+		const players = this.playerManager.players;
 		try {
-			const players = this.playerManager.players;
-
 			players.forEach((player) => {
-				player.setGameState('initializing');
+				player.setGameState(PlayerState.INITIALIZING);
 			});
 			const config = await this.gameInitializer.loadGameConfig(
 				players,
@@ -324,9 +321,9 @@ export default class LobbyHandler extends CheckedNamespaceHandler<
 
 			this.namespace.emit('game-started');
 			players.forEach((player) => {
-				player.setGameState('playing');
+				player.setGameState(PlayerState.PLAYING);
 			});
-			this.game = await this.gameInitializer.startGame(this, this.playerManager.players, config);
+			this.game = await this.gameInitializer.startGame(this, players, config);
 			this.game!.onEnd(() => {
 				this.game = null;
 				this.gameInitializer = null;
@@ -334,8 +331,12 @@ export default class LobbyHandler extends CheckedNamespaceHandler<
 			});
 		} catch (e) {
 			if (e === 'cancelled') {
+				this.gameInitializer = null;
 				this.game = null;
 				this.namespace.emit('game-canceled');
+				players.forEach((player) => {
+					player.setGameState(PlayerState.LOBBY);
+				});
 			} else if (e instanceof ClientError) {
 				this.namespace.emit('error', {
 					message: e.message

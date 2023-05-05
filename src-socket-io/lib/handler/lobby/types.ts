@@ -55,9 +55,14 @@ export type LobbyClientEventFunctions = {
 	[K in keyof LobbyClientEvents]: (data: LobbyClientEvents[K]) => void;
 };
 
+export enum PlayerState {
+	LOBBY = 'lobby',
+	PLAYING = 'playing',
+	INITIALIZING = 'initializing'
+}
 export const ZJoinInfo = ZLobbyInfo.extend({
 	players: z.array(ZGeneralPlayerInfo),
 	role: z.nativeEnum(LobbyRole),
 	username: z.string(),
-	state: z.string()
+	state: z.nativeEnum(PlayerState)
 });

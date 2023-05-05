@@ -65,7 +65,7 @@ export default class LobbyManagerHandler extends CheckedServerHandler<
 					const lobbyId = joinOptions.lobbyId;
 					const lobby = this.lobbyMap.get(lobbyId);
 					if (!lobby) {
-						cb({ message: 'Lobby not found', success: false });
+                        cb({ message: 'LOBBY NOT FOUND', success: false });
 						return;
 					}
 

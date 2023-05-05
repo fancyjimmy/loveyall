@@ -17,10 +17,10 @@
 {#if $role === "host"}
     <div>
         <p>Choose Size</p>
-        <p>Width</p>
+        <p>Width {width}</p>
 
         <input type="range" min="20" max="80" bind:value={width}>
-        <p>Height</p>
+        <p>Height {height}</p>
         <input type="range" min="20" max="80" bind:value={height}>
 
         <button class="bg-pink-600 " on:click={() => {createCanvas(width, height)}}>

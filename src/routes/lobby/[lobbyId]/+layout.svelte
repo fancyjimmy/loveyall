@@ -28,7 +28,7 @@
                 {lobbyId: data.lobbyId},
                 (response: Response<Partial<GeneralLobbyInfo>>) => {
                     if (response.success === false) {
-                        reject(response.message);
+                        reject(response);
                         return;
                     }
                     if (response.data.authenticationPolicyType === 'password') {
@@ -77,7 +77,7 @@
 
 
     function setGame(name: string | null) {
-        setSessionStorage(data.lobbyId, "game", name === null ? "" : name);
+        setSessionStorage(data.lobbyId, "game", name);
         $gameName = name;
     }
 
@@ -91,7 +91,8 @@
                 reject(data);
             });
             setTimeout(() => {
-                reject({message: 'timeout'});
+                console.log("hello");
+                reject({message: 'LOBBY NOT FOUND'});
             }, 1000);
         });
     }
@@ -130,11 +131,14 @@
         });
 
         socket.on("game-started", () => {
-            $playerState = "playing";
+            if ($playerState === "initializing") {
+                $playerState = "playing";
+            }
         });
 
         socket.on("game-canceled", () => {
             $playerState = "lobby";
+            setGame(null);
         });
 
         socket.on("game-ended", () => {
@@ -144,7 +148,7 @@
 
         socket.on('disconnect', () => {
             loadingState = 'error';
-            error = 'Disconnected';
+            error = {message: 'Disconnected'};
         });
     }
 
@@ -237,16 +241,16 @@
         {#if loadingState === 'loading'}
             <LoadingScreen/>
         {:else if loadingState === 'error'}
-            <ErrorScreen {error}></ErrorScreen>
+            <ErrorScreen {error} lobbyId={data.lobbyId}></ErrorScreen>
         {:else}
             <div class="w-full h-full bg-slate-800 relative grid grid-cols-[3fr,1fr]">
                 <div class="flex flex-col">
-                    <div class="h-full max-w-full relative overflow-auto scrollbar-hidden">
+                    <div class="max-w-full relative h-full">
                         <slot/>
                     </div>
                 </div>
 
-                <div class="flex flex-col">
+                <div class="flex flex-col min-h-0">
                     <div class="p-2">
 
                         <LobbySettingsComponent {self} {joinInfo}></LobbySettingsComponent>

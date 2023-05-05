@@ -10,45 +10,15 @@
             game = game;
         }, 1000);
     }
-
-
-    let list = ["Südostengland",
-        "Cote d'Azur",
-        "Barcelona",
-        "Madrid",
-        "Neckarregion",
-        "Rhein-Main-Region",
-        "München Südbayern",
-        "Drittes Italien",
-        "Oö. Zentralraum, Salzburg",
-        "Slowenien Nordkroatien",
-        "38 Belgrad Novisad",
-        "Plovdiv",
-        "Siebenbürgen",
-        "Kisalfold",
-        "Mittel u. Transdanubien",
-        "Cottbus",
-        "Bratislava",
-        "Cork",
-        "Helsinki  Espo",
-        "Öresundregion",
-        "Stockholm"];
 </script>
+<div class="w-screen h-screen bg-slate-700 items-center flex gap-4 flex-col">
+    <h1 class="text-4xl font-mono">[PLACEHOLDER]</h1>
+    <div class="flex flex-col items-center gap-2 w-96">
+        <a class="p-3 bg-sky-500 hover:bg-sky-600 duration-200 w-full text-center" href="/lobby">Lobby</a>
+        <a class="p-3 bg-sky-500 hover:bg-sky-600 duration-200 w-full text-center" href="/chat">Chat</a>
+        <a class="p-3 bg-sky-500 hover:bg-sky-600 duration-200 w-full text-center" href="/general">General</a>
+    </div>
 
-<h1>Uno</h1>
-<ul>
-    <li><a href="/lobby">Lobby</a></li>
-    <li><a href="/chat">Chat</a></li>
-    <li><a href="/general">General</a></li>
-</ul>
-
-<!-- show iframe of google search for every list item -->
-
-<div class="flex h-screen w-screen overflow-x-auto">
-    {#each list as item}
-        <a href="https://www.google.com/search?q={encodeURI('Karte ' + item)}" class="bg-red-500 p-2 link"
-           target="_blank">{item}</a>
-    {/each}
 </div>
 <!--
 <div class="game">

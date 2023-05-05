@@ -4,7 +4,11 @@ import { LOBBY_SESSION_KEY } from '../constants';
 
 const sockets: { [lobbyId: string]: Socket } = {};
 
-export function setSessionStorage(lobbyId: string, key: string, value: string) {
+export function setSessionStorage(lobbyId: string, key: string, value: string | null) {
+	if (value === null) {
+		sessionStorage.removeItem(`${LOBBY_SESSION_KEY}${lobbyId}${key}`);
+		return;
+	}
 	sessionStorage.setItem(`${LOBBY_SESSION_KEY}${lobbyId}${key}`, value);
 }
 
@@ -17,7 +21,8 @@ export function getLobbyConnection(lobbyId: string, sessionKey: string): Socket 
 		sockets[lobbyId] = io(`/lobby/${lobbyId}`, {
 			auth: {
 				token: sessionKey
-			}
+			},
+			forceNew: true
 		});
 	}
 	return sockets[lobbyId];

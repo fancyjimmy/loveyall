@@ -12,6 +12,8 @@ export const ZSharedPixelCanvasEvents = z.object({
 		.function()
 		.args(z.array(z.array(ZColor.nullable())))
 		.returns(z.void()),
+	fillPixel: z.tuple([z.number(), z.number(), z.number(), z.number(), ZColor.nullable()]),
+	clear: createResponseSchema(z.void()),
 	updatePixel: z.tuple([z.number(), z.number(), ZColor.nullable()]),
 	end: createResponseSchema(z.void())
 });

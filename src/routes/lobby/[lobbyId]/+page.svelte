@@ -26,9 +26,15 @@
     })
 
 </script>
+
+<svelte:head>
+    <title>{$gameName}</title>
+</svelte:head>
+
 <div class="w-full h-full bg-white">
     {#if loaded}
         {#if $gameName !== null}
+
             {#if $playerState === "playing"}
                 <GameLayout {socket} name={$gameName}></GameLayout>
             {:else if $playerState === "initializing"}

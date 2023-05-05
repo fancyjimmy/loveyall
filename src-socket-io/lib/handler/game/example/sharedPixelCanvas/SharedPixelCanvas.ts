@@ -37,6 +37,13 @@ export default class SharedPixelCanvas extends BasicGame<typeof ZSharedPixelCanv
 					}
 
 					this.end();
+				},
+				clear: (cb, player) => {
+					this.clear();
+					cb({ success: true });
+				},
+				fillPixel: ([x, y, width, height, color], player) => {
+					this.pixelFill(x, y, width, height, color);
 				}
 			},
 			{
@@ -76,5 +83,19 @@ export default class SharedPixelCanvas extends BasicGame<typeof ZSharedPixelCanv
 	pixelUpdate(x: number, y: number, color: Color | null) {
 		this.#pixels[y][x] = color;
 		this.emit('pixel-change', x, y, color);
+	}
+
+	pixelFill(x: number, y: number, width: number, height: number, color: Color | null) {
+		for (let startY = y; startY < y + height; startY++) {
+			for (let startX = x; startX < x + width; startX++) {
+				if (startY < 0 || startX < 0 || startY >= this.#height || startX >= this.#width) continue;
+				this.#pixels[startY][startX] = color;
+			}
+		}
+		this.emit('pixel-fill', x, y, width, height, color);
+	}
+
+	private clear() {
+		this.pixelFill(0, 0, this.#width, this.#height, null);
 	}
 }

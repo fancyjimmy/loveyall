@@ -44,12 +44,21 @@
 
     $: ctx = canvas?.getContext('2d');
 
-    let drawingMode: 'quick' | 'single' = 'single';
+    let drawingMode: 'quick' | 'single' = 'quick';
+
+    let brushSize = 1;
 
     function listenToPixelChanges() {
         socket.on('pixel-change', (x: number, y: number, color: Color | null) => {
             drawPixel(x, y, color);
         });
+
+        socket.on(
+            'pixel-fill',
+            (x: number, y: number, width: number, height: number, color: Color | null) => {
+                fillArea(x, y, width, height, color);
+            }
+        );
     }
 
     function drawPixel(x: number, y: number, color: Color | null) {
@@ -63,7 +72,7 @@
 
     function setPixel(x: number, y: number, color: Color | null) {
         let rgb = ctx.getImageData(x, y, 1, 1).data;
-        if (rgb[0] === color?.r && rgb[1] === color?.g && rgb[2] === color?.b) return;
+        if ((rgb[0] === color?.r && rgb[1] === color?.g && rgb[2] === color?.b) && colorMode !== "erase") return;
         if (colorMode === 'erase') color = null;
         drawPixel(x, y, color);
         socket.emit('pixel:updatePixel', x, y, color);
@@ -87,17 +96,54 @@
             let x = (event.clientX - rect.left) * (canvas.width / rect.width);
             let y = (event.clientY - rect.top) * (canvas.height / rect.height);
 
+            if (brushSize > 1) {
+                const col = hexToColor(color);
+                let rgb = ctx.getImageData(x, y, 1, 1).data;
+                if ((rgb[0] === col?.r && rgb[1] === col?.g && rgb[2] === col?.b) && colorMode !== "erase") return;
+                drawThickPixel(x, y, brushSize, col);
+                return;
+            }
             setPixel(Math.floor(x), Math.floor(y), hexToColor(color));
         }
     };
 
+    function fillArea(x: number, y: number, width: number, height: number, color: Color | null) {
+        if (color === null) {
+            ctx.clearRect(x, y, width, height);
+        } else {
+            ctx.fillStyle = `rgb(${color.r}, ${color.g}, ${color.b})`;
+            ctx.fillRect(x, y, width, height);
+        }
+    }
+
     const singleDrawingCallback = (event) => {
+        //if (drawingMode !== 'single') return;
+
         let rect = canvas.getBoundingClientRect();
         let x = (event.clientX - rect.left) * (canvas.width / rect.width);
         let y = (event.clientY - rect.top) * (canvas.height / rect.height);
 
+        if (brushSize > 1) {
+            drawThickPixel(x, y, brushSize, hexToColor(color));
+            return;
+        }
         setPixel(Math.floor(x), Math.floor(y), hexToColor(color));
     };
+
+    function setPixelFill(x: number, y: number, width: number, height: number, color: Color | null) {
+        fillArea(x, y, width, height, color);
+        socket.emit('pixel:fillPixel', x, y, width, height, color);
+    }
+
+    function drawThickPixel(x: number, y: number, size: number, color: Color | null) {
+        let startX = Math.floor(x - size / 2);
+        let startY = Math.floor(y - size / 2);
+
+        if (colorMode === "erase") {
+            color = null;
+        }
+        setPixelFill(startX, startY, size, size, color);
+    }
 
     onMount(() => {
         getInitialImage();
@@ -108,7 +154,7 @@
             canvas.removeEventListener('mousedown', singleDrawingCallback);
         };
     });
-    let color = '#FF0000';
+    let color = '#793737';
 
     function download() {
         const link = document.createElement('a');
@@ -120,10 +166,11 @@
     let container: HTMLDivElement;
     let colorMode: 'color' | 'erase' = 'color';
 
-
     $: aspectRatio = width / height;
 
     let realHeight = 450;
+
+    const maxBrushSize = 6;
 </script>
 
 <div class="w-full h-screen pixelbackground bg-sky-400 pixel-font text-xl">
@@ -132,12 +179,12 @@
             <p>Loading...</p>
         </div>
     {:else}
-        <div class="flex w-full  flex-col gap-2">
+        <div class="grid w-full h-full grid-rows-[5rem,1fr] gap-8">
             <div class="p-8">
                 <div class="bg-white bordered p-2 font-semibold text-2xl">Pixel Draw Together</div>
             </div>
 
-            <div class="flex-1 grid grid-cols-[12rem,1fr] p-8 pt-0">
+            <div class="m-0 inset-0 grid grid-cols-[12rem,1fr] p-8 pt-0">
                 <div class="flex flex-col gap-3">
                     {#if $role === 'host'}
                         <button
@@ -167,6 +214,29 @@
                                 class="p-3 bordered-thin {colorMode === 'color' ? 'color-mode' : 'no-opacity'} w-full"
                                 style="--color: {color}"><span class="contrasting">{colorMode}</span></button
                         >
+
+                        <button
+                                on:click={() => {
+								brushSize = Math.max((brushSize + 1) % maxBrushSize, 1);
+							}}
+                                class="p-3 bordered-thin w-full flex items-center justify-between"
+                                style="--color: {color}"
+                        >
+                            <div class="bg-black" style="width: {brushSize * 5}px; height: {brushSize * 5}px"/>
+                            {brushSize}</button
+                        >
+
+                        {#if $role === 'host'}
+                            <button
+                                    class="w-full bordered-thin bg-blue-300 p-3 hover:bg-blue-500 duration-200"
+                                    on:click={() => {
+									socket.emit('pixel:clear', (response) => {
+										console.log(response);
+									});
+								}}
+                            >Clear
+                            </button>
+                        {/if}
                         <button
                                 on:click={download}
                                 class="p-3 bottom-3 absolute hover:text-blue-700 duration-200"
@@ -176,19 +246,28 @@
                     </div>
                 </div>
 
-                <div class="relative" bind:this={container}>
-                    <div class="overflow-scroll h-full w-full">
-
+                <div class="relative min-h-0 grow-0" bind:this={container}>
+                    <div class="relative overflow-hidden w-full h-full">
                         <canvas
                                 {width}
                                 {height}
                                 bind:this={canvas}
-                                style="--pixelsize: {realHeight/ height}; height: {realHeight}px; width: {realHeight * aspectRatio}px;"
-                                class="bordered"
+                                style="--pixelsize: {realHeight /
+								height}; height: {realHeight}px; margin:auto; inset:0; width: {realHeight *
+								aspectRatio}px;"
+                                class="bordered absolute"
                         />
                     </div>
+
                     <div class="absolute bottom-0 inset-x-0">
-                        <input type="range" bind:value={realHeight} min="200" max="2000" step="5" class="w-full">
+                        <input
+                                type="range"
+                                bind:value={realHeight}
+                                min="200"
+                                max="2000"
+                                step="5"
+                                class="w-full"
+                        />
                     </div>
                 </div>
             </div>
@@ -197,7 +276,6 @@
 </div>
 
 <style>
-    @import url('https://fonts.googleapis.com/css2?family=DotGothic16&display=swap');
 
     canvas {
         margin: 0px;

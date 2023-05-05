@@ -34,7 +34,7 @@
             });
 
             setTimeout(() => {
-                reject("timeout");
+                reject("Error creating room");
             }, 5000);
         });
     }

@@ -32,7 +32,7 @@ export default class SharedPixelCanvasInitializer extends GameInitializer<
 			});
 
 			host.onTimeout(() => {
-				reject('Canceled');
+				reject('cancelled');
 			});
 		});
 	}

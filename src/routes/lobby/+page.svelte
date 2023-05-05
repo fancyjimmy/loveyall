@@ -16,9 +16,8 @@
         if (passwordAuth) {
             authenticationPolicy['password'] = password;
         }
-        console.log(io);
 
-        io.emit(
+        io.volatile.emit(
             'lobby:create',
             {
                 name: lobbyName,
@@ -40,7 +39,7 @@
     let lobbies: GeneralLobbyInfo[] = [];
 
     function getPublicLobbies() {
-        io.emit('lobby:getAll', (response) => {
+        io.volatile.emit('lobby:getAll', (response) => {
             lobbies = response;
         });
     }
