@@ -1,126 +1,184 @@
-import {ServerHandler} from "../../socket/ServerHandler";
-import type {Server, Socket} from "socket.io";
-import {ServerChatHandler} from "./index";
-import type {ChatRoomHandler} from "./types";
+import { ServerHandler } from '../../socket/ServerHandler';
+import type { Server, Socket } from 'socket.io';
+import { ServerChatHandler } from './index';
+import type { ChatRoomHandler } from './types';
 
 const unreservedChars = [
-    '-', '_', '.', '~',
-    'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z',
-    'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z',
-    '0', '1', '2', '3', '4', '5', '6', '7', '8', '9'
+	'-',
+	'_',
+	'.',
+	'~',
+	'A',
+	'B',
+	'C',
+	'D',
+	'E',
+	'F',
+	'G',
+	'H',
+	'I',
+	'J',
+	'K',
+	'L',
+	'M',
+	'N',
+	'O',
+	'P',
+	'Q',
+	'R',
+	'S',
+	'T',
+	'U',
+	'V',
+	'W',
+	'X',
+	'Y',
+	'Z',
+	'a',
+	'b',
+	'c',
+	'd',
+	'e',
+	'f',
+	'g',
+	'h',
+	'i',
+	'j',
+	'k',
+	'l',
+	'm',
+	'n',
+	'o',
+	'p',
+	'q',
+	'r',
+	's',
+	't',
+	'u',
+	'v',
+	'w',
+	'x',
+	'y',
+	'z',
+	'0',
+	'1',
+	'2',
+	'3',
+	'4',
+	'5',
+	'6',
+	'7',
+	'8',
+	'9'
 ];
 
 export default class ServerChatRoomHandler extends ServerHandler<ChatRoomHandler> {
-    rooms = new Map<string, ServerChatHandler>();
+	rooms = new Map<string, ServerChatHandler>();
 
-    constructor(io: Server) {
-        super("chatRoom", io, {
-            create: ({name}, socket, io) => {
-                name = name.trim();
+	constructor(io: Server) {
+		super('chatRoom', io, {
+			create: ({ name }, socket, io) => {
+				name = name.trim();
 
-                if (name === "general") {
-                    this.emitError(socket, "general isn't a valid room name");
-                    console.log("chatroom", `room ${name} is not allowed`, {extra: {socketId: socket.id}})
-                    return;
-                }
-                if (!this.isValidName(name)) {
-                    this.emitError(socket, `${name} isn't a valid room name, because it has illegal characters`);
-                    console.log("chatroom", `room ${name} is not allowed`, {extra: {socketId: socket.id}})
-                    name = this.removeIllegalChars(name);
-                    console.log("chatroom", `room ${name} is used instead`, {extra: {socketId: socket.id}})
-                }
+				if (name === 'general') {
+					this.emitError(socket, "general isn't a valid room name");
+					return;
+				}
+				if (!this.isValidName(name)) {
+					this.emitError(
+						socket,
+						`${name} isn't a valid room name, because it has illegal characters`
+					);
 
-                if (!name) {
-                    this.emitError(socket, `room name is empty`);
-                    console.log("chatroom", `room name is empty`, {extra: {socketId: socket.id}})
-                    return;
-                }
+					name = this.removeIllegalChars(name);
+				}
 
-                if (this.rooms.has(name)) {
-                    this.emitError(socket, `${name} already exists`);
-                    socket.emit("roomExists", {name: name})
-                    console.log("chatroom", `room ${name} already exists`, {extra: {socketId: socket.id}})
-                    return;
-                } else {
-                    console.log("chatroom", `room ${name} created`, {extra: {socketId: socket.id}})
-                    const room = new ServerChatHandler(this.io, name, true);
-                    this.rooms.set(room.roomName, room);
-                    room.whenUserChanges((count) => {
-                        this.broadcastRoomChange();
-                    });
-                    this.broadcastRoomChange();
-                    socket.emit("roomCreated", {name: room.roomName});
-                    this.listenToChatRoom(room);
-                }
-            },
-            get: (data, socket, io) => {
-                console.log("chatroom", `room list requested`, {extra: {socketId: socket.id}, severity: -1});
-                this.broadcastRoomChange();
-                this.emitRooms(socket);
-                socket.join(this.prefix);
-            },
-            leave: (data, socket, io) => {
-                console.log("chatroom", `room list not listened to anymore`, {
-                    extra: {socketId: socket.id},
-                    severity: -1
-                });
-                socket.leave(this.prefix);
-            }
-        });
-    }
+				if (!name) {
+					this.emitError(socket, `room name is empty`);
+					return;
+				}
 
-    isValidName(name: string) {
+				if (this.rooms.has(name)) {
+					this.emitError(socket, `${name} already exists`);
+					socket.emit('roomExists', { name: name });
+					return;
+				} else {
+					const room = new ServerChatHandler(this.io, name, true);
+					this.rooms.set(room.roomName, room);
+					room.whenUserChanges((count) => {
+						this.broadcastRoomChange();
+					});
+					this.broadcastRoomChange();
+					socket.emit('roomCreated', { name: room.roomName });
+					this.listenToChatRoom(room);
+				}
+			},
+			get: (data, socket, io) => {
+				this.broadcastRoomChange();
+				this.emitRooms(socket);
+				socket.join(this.prefix);
+			},
+			leave: (data, socket, io) => {
+				socket.leave(this.prefix);
+			}
+		});
+	}
 
-        return name.split("").every(char => unreservedChars.includes(char));
-    }
+	isValidName(name: string) {
+		return name.split('').every((char) => unreservedChars.includes(char));
+	}
 
-    removeIllegalChars(name: string) {
-        return name.split("").map(char => char === " " ? "-" : char).filter(char => unreservedChars.includes(char)).join("");
-    }
+	removeIllegalChars(name: string) {
+		return name
+			.split('')
+			.map((char) => (char === ' ' ? '-' : char))
+			.filter((char) => unreservedChars.includes(char))
+			.join('');
+	}
 
-    broadcastRoomChange() {
-        let rooms = Array.from(this.rooms.values()).map(values => {
-            return {
-                name: values.roomName,
-                userCount: values.userCount
-            }
-        });
-        this.io.to(this.prefix).emit("rooms", rooms);
-    }
+	broadcastRoomChange() {
+		let rooms = Array.from(this.rooms.values()).map((values) => {
+			return {
+				name: values.roomName,
+				userCount: values.userCount
+			};
+		});
+		this.io.to(this.prefix).emit('rooms', rooms);
+	}
 
-    emitError(socket: Socket, error: string) {
-        socket.emit("error", error);
-    }
+	emitError(socket: Socket, error: string) {
+		socket.emit('error', error);
+	}
 
-    listenToChatRoom(room: ServerChatHandler) {
-        const listener = (socket: Socket) => {
-            room.registerSocket(this.io.of(room.namespaceName), socket);
-        };
+	listenToChatRoom(room: ServerChatHandler) {
+		const listener = (socket: Socket) => {
+			room.registerSocket(this.io.of(room.namespaceName), socket);
+		};
 
-        // new Sockets are automatically able to join the new room
-        this.io.on("connection", listener);
+		// new Sockets are automatically able to join the new room
+		this.io.on('connection', listener);
 
-        // old sockets are able to join the new room
-        room.register();
+		// old sockets are able to join the new room
+		room.register();
 
-        room.whenClosing(() => {
-            console.log("chatroom", `room ${room.roomName} was closed`)
-            this.rooms.delete(room.roomName);
-            // new Sockets are not able to join the new room
-            room.unregister(true);
-            // old sockets are not able to join the new room
-            this.broadcastRoomChange();
-        });
-    }
+		room.whenClosing(() => {
+			console.log('chatroom', `room ${room.roomName} was closed`);
+			this.rooms.delete(room.roomName);
+			// new Sockets are not able to join the new room
+			room.unregister(true);
+			// old sockets are not able to join the new room
+			this.broadcastRoomChange();
+		});
+	}
 
-    emitRooms(socket: Socket) {
-        let rooms = Array.from(this.rooms.values()).map(values => {
-            return {
-                name: values.roomName,
-                userCount: values.userCount
-            }
-        });
+	emitRooms(socket: Socket) {
+		let rooms = Array.from(this.rooms.values()).map((values) => {
+			return {
+				name: values.roomName,
+				userCount: values.userCount
+			};
+		});
 
-        socket.emit("rooms", rooms);
-    }
+		socket.emit('rooms', rooms);
+	}
 }
