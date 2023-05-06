@@ -10,18 +10,17 @@ export class ChatGameManager {
         this.chatHandler = chatHandler;
     }
 
-    addChatGame(condition: MessageCallback<boolean>, chatGame: ChatGame, remove: boolean = true) {
+    addChatGame(condition: MessageCallback<boolean>, chatGame: ChatGame, repeatable: boolean = false) {
         let id = chatGame.startIf(condition);
-        if (remove) {
-            chatGame.whenStopps(() => {
-                this.chatHandler.removeMessageCallback(id);
-            });
+        if (repeatable) {
+          chatGame.whenStopps(() => {
+            chatGame.reset();
+          });
         } else {
-            chatGame.whenStopps(() => {
-                chatGame.reset();
-            })
+          chatGame.whenStopps(() => {
+            this.chatHandler.removeMessageCallback(id);
+          });
         }
-
     }
 
     stopAllChatGames() {
