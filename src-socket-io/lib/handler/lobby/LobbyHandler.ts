@@ -291,7 +291,7 @@ export default class LobbyHandler extends CheckedNamespaceHandler<
 				return message.startsWith('/hangman');
 			},
 			new Hangman(this.chatHandler),
-			false
+			true
 		);
 	}
 
