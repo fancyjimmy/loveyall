@@ -180,6 +180,11 @@ export default class Player {
 	onDisconnect(listener: () => void): number {
 		return this.disconnectListener.addListener(listener);
 	}
+
+	removeDisconnectListener(id: number) {
+		this.disconnectListener.removeListener(id);
+	}
+
 	updateSocket(socket: Socket | null) {
 		this.socket = socket;
 

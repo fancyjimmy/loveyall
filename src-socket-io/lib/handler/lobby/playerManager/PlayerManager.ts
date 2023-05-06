@@ -30,18 +30,7 @@ export default class PlayerManager {
 		public readonly maxPlayers: number,
 		public readonly rolePolicy: RolePolicy,
 		private readonly milliseconds: number = 1000 * 60 * 5
-	) {
-		this.playerRemoveListener.addListener((player, players) => {
-			console.log(player);
-		});
-		this.playerChangeListener.addListener((players) => {
-			console.log(players.length);
-		});
-
-		this.playerAddListener.addListener((player, players) => {
-			console.log(player);
-		});
-	}
+	) {}
 
 	public get playerInfos(): PlayerInfo[] {
 		return this.#players.map((player) => player.playerInfo);
@@ -62,7 +51,6 @@ export default class PlayerManager {
 			throw new ClientError('You are not Connected');
 		}
 
-		console.log('bind  ' + player.playerInfo.username);
 		if (player.isConnected) {
 			throw new ClientError('You are already connected');
 		}
