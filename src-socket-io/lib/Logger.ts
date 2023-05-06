@@ -1,7 +1,7 @@
 export type ConsoleListener = (type: string | symbol, time: Date, ...args: any[]) => void;
 
 export class Logger {
-	public showLogs = false;
+	public showLogs = true;
 	private listeners: ConsoleListener[] = [];
 
 	proxy(console: Console) {

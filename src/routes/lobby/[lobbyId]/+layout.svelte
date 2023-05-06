@@ -1,30 +1,30 @@
 <script lang="ts">
-    import {onMount, SvelteComponent} from 'svelte';
-    import {Socket} from 'socket.io-client';
-    import {io} from '$lib/WebsocketConnection';
-    import type {GeneralLobbyInfo, Response} from '../../../../src-socket-io/lib/handler/lobby/manage/types';
-    import {getLobbyConnection, getSessionStorage, setSessionStorage} from '../../../lib/lobby/LobbyConnection';
-    import Chat from '$lib/components/chat/Chat.svelte';
-    import ServerMessage from '../../../lib/components/lobby/lobbyPage/ServerMessage.svelte';
-    import type {GeneralPlayerInfo, PlayerInfo} from '../../../../src-socket-io/lib/handler/lobby/types';
-    import type {JoinInfo} from '../../../../src-socket-io/lib/handler/lobby/LobbyHandler';
-    import PlayerListComponent from "../../../lib/components/lobby/lobbyPage/PlayerListComponent.svelte";
-    import Dialog from "$lib/components/lobby/Dialog.svelte";
-    import LoadingScreen from "../../../lib/components/lobby/lobbyPage/LoadingScreen.svelte";
-    import ErrorScreen from "../../../lib/components/lobby/lobbyPage/ErrorScreen.svelte";
-    import LobbySettingsComponent from "../../../lib/components/lobby/lobbyPage/LobbySettingsComponent.svelte";
-    import CondensedMessage from "../../../lib/components/lobby/lobbyPage/CondensedMessage.svelte";
-    import {gameName, playerState, role} from "../../../lib/components/lobby/gameStore";
+  import { onMount, SvelteComponent } from "svelte";
+  import { Socket } from "socket.io-client";
+  import { io } from "$lib/WebsocketConnection";
+  import type { GeneralLobbyInfo, Response } from "../../../../src-socket-io/lib/handler/lobby/manage/types";
+  import { getLobbyConnection, getSessionStorage, setSessionStorage } from "../../../lib/lobby/LobbyConnection";
+  import Chat from "$lib/components/chat/Chat.svelte";
+  import ServerMessage from "../../../lib/components/lobby/lobbyPage/ServerMessage.svelte";
+  import type { GeneralPlayerInfo, PlayerInfo } from "../../../../src-socket-io/lib/handler/lobby/types";
+  import type { JoinInfo } from "../../../../src-socket-io/lib/handler/lobby/LobbyHandler";
+  import PlayerListComponent from "../../../lib/components/lobby/lobbyPage/PlayerListComponent.svelte";
+  import Dialog from "$lib/components/lobby/Dialog.svelte";
+  import LoadingScreen from "../../../lib/components/lobby/lobbyPage/LoadingScreen.svelte";
+  import ErrorScreen from "../../../lib/components/lobby/lobbyPage/ErrorScreen.svelte";
+  import LobbySettingsComponent from "../../../lib/components/lobby/lobbyPage/LobbySettingsComponent.svelte";
+  import CondensedMessage from "../../../lib/components/lobby/lobbyPage/CondensedMessage.svelte";
+  import { gameName, playerState, role, username } from "../../../lib/components/lobby/gameStore";
 
-    export let data;
+  export let data;
 
-    let loadingState: 'loading' | 'error' | 'success' = 'loading';
+  let loadingState: "loading" | "error" | "success" = "loading";
 
 
-    async function isPasswordAuthenticated() {
-        return new Promise((resolve, reject) => {
-            io.emit(
-                'lobby:get',
+  async function isPasswordAuthenticated() {
+    return new Promise((resolve, reject) => {
+      io.emit(
+        "lobby:get",
                 {lobbyId: data.lobbyId},
                 (response: Response<Partial<GeneralLobbyInfo>>) => {
                     if (response.success === false) {
@@ -179,39 +179,37 @@
         socket = getLobbyConnection(data.lobbyId, token);
 
         try {
-            const initData: JoinInfo = await loadData(socket);
-            joinInfo = initData;
-            players = initData.players;
-            $gameName = initData.game;
-            $role = initData.role;
-            // TODO FIX THE ZOD OBJECT TO ENUM
-            $playerState = initData.state || "lobby";
-            self = {
-                username: initData.username,
-                role: initData.role
-            };
-            chatRoomId = initData.chatRoomId;
-            maxPlayers = initData.maxPlayers;
+          const initData: JoinInfo = await loadData(socket);
+          joinInfo = initData;
+          players = initData.players;
+          $gameName = initData.game;
+          $username = initData.username;
+          $role = initData.role;
+          // TODO FIX THE ZOD OBJECT TO ENUM
+          $playerState = initData.state || "lobby";
 
-            initSocketEvents(socket);
-            loadingState = 'success';
+          chatRoomId = initData.chatRoomId;
+          maxPlayers = initData.maxPlayers;
+
+          initSocketEvents(socket);
+          loadingState = "success";
         } catch (e) {
-            loadingState = 'error';
-            error = e;
+          loadingState = "error";
+          error = e;
         }
     });
 
-    let lobbyId = '';
-    let username = '';
+  let lobbyId = "";
+  let usedName = "";
 
 
-    function kick(player: GeneralPlayerInfo) {
-        socket.emit('kick', player.username, (response: Response<null>) => {
-            if (response.success === false) {
-                alert(response.message);
-            }
-        });
-    }
+  function kick(player: GeneralPlayerInfo) {
+    socket.emit("kick", player.username, (response: Response<null>) => {
+      if (response.success === false) {
+        alert(response.message);
+      }
+    });
+  }
 
 
     let chatRoomId;
@@ -261,20 +259,20 @@
                         </div>
                     </div>
 
-                    <Chat
-                            room={chatRoomId}
-                            user={self.username}
-                            class="flex-1 min-w-[25em]"
-                            userComponent={null}
-                            messageFormatter={(message) => {
+                  <Chat
+                    room={chatRoomId}
+                    user={$username}
+                    class="flex-1 min-w-[25em]"
+                    userComponent={null}
+                    messageFormatter={(message) => {
 						if (message.extra?.server === true) {
 							return ServerMessage;
 						}
                         return CondensedMessage;
 					}}
-                    >
-                        <p slot="icon"/>
-                    </Chat>
+                  >
+                    <p slot="icon" />
+                  </Chat>
                 </div>
 
             </div>

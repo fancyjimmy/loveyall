@@ -15,7 +15,6 @@ export default abstract class GameInitializer<
 	protected gameClass: Class<TGame, [LobbyHandler, Player[], TGameOptions]>;
 
 	protected constructor(
-		protected lobbyHandler: LobbyHandler,
 		gameClass: Class<TGame, [LobbyHandler, Player[], TGameOptions]>,
 		requirements: TGameRequirements
 	) {
@@ -23,13 +22,13 @@ export default abstract class GameInitializer<
 		this.gameClass = gameClass;
 	}
 
-	public abstract loadGameConfig(players: Player[], host: Player | null): Promise<TGameOptions>;
+	public abstract loadGameConfig(players: Player[], host: Player): Promise<TGameOptions>;
 
 	// returns started Game
 	public startGame(lobbyHandler: LobbyHandler, players: Player[], config: TGameOptions): TGame {
 		const Game = this.gameClass.bind({}, lobbyHandler, players, config);
-		const game = new Game();
-		game.register();
+		const game: TGame = new Game();
+		game.start();
 
 		return game;
 	}

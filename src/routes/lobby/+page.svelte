@@ -1,47 +1,53 @@
 <script lang="ts">
-    import {io} from '../../lib/WebsocketConnection';
-    import {goto} from '$app/navigation';
-    import type {CreatedClientReturn, GeneralLobbyInfo} from '../../../src-socket-io/lib/handler/lobby/manage/types';
-    import {onMount} from 'svelte';
-    import Icon from '@iconify/svelte';
+  import { io } from "../../lib/WebsocketConnection";
+  import { goto } from "$app/navigation";
+  import type { CreatedClientReturn, GeneralLobbyInfo } from "../../../src-socket-io/lib/handler/lobby/manage/types";
+  import { onMount } from "svelte";
+  import Icon from "@iconify/svelte";
 
-    let maxPlayers = 5;
-    let isPrivate = false;
-    let password: string | null = null;
+  let maxPlayers = 5;
+  let isPrivate = false;
+  let password: string | null = null;
 
-    function createRoom() {
-        const authenticationPolicy = {
-            name: passwordAuth ? 'password' : 'none'
-        };
-        if (passwordAuth) {
-            authenticationPolicy['password'] = password;
+  let created = false;
+
+  function createRoom() {
+    const authenticationPolicy = {
+      name: passwordAuth ? "password" : "none"
+    };
+    if (passwordAuth) {
+      authenticationPolicy["password"] = password;
+    }
+
+    created = true;
+
+    io.volatile.emit(
+      "lobby:create",
+      {
+        name: lobbyName,
+        maxPlayers: maxPlayers,
+        isPrivate: isPrivate,
+        authenticationPolicy: authenticationPolicy
+      },
+      (response: CreatedClientReturn) => {
+
+        console.log(response);
+        if (response.success) {
+          goto("/lobby/" + response.data.lobbyId);
+        } else {
+          alert(response.message);
         }
-
-        io.volatile.emit(
-            'lobby:create',
-            {
-                name: lobbyName,
-                maxPlayers: maxPlayers,
-                isPrivate: isPrivate,
-                authenticationPolicy: authenticationPolicy
-            },
-            (response: CreatedClientReturn) => {
-
-                if (response.success) {
-                    goto('/lobby/' + response.data.lobbyId);
-                } else {
-                    alert(response.message);
-                }
-            }
-        );
+        created = false;
+      }
+    );
     }
 
     let lobbies: GeneralLobbyInfo[] = [];
 
     function getPublicLobbies() {
-        io.volatile.emit('lobby:getAll', (response) => {
-            lobbies = response;
-        });
+      io.emit("lobby:getAll", (response) => {
+        lobbies = response;
+      });
     }
 
     onMount(() => {
@@ -58,18 +64,19 @@
         class="w-screen h-screen bg-slate-900 flex"
 >
     <div class="m-5">
-        <form
-                class="relative flex flex-col bg-slate-800 p-8 h-full rounded border-slate-700 border text-slate-300 gap-2"
-        >
-            <h4 class="text-3xl mb-2 font-semibold text-white w-96">New Lobby</h4>
-            <label class="font-semibold text-slate-300" for="lobbyName">Lobby Name</label>
+      <form
+        class="relative flex flex-col bg-slate-800 p-8 h-full rounded border-slate-700 border text-slate-300 gap-2"
+        on:submit|preventDefault={createRoom}
+      >
+        <h4 class="text-3xl mb-2 font-semibold text-white w-96">New Lobby</h4>
+        <label class="font-semibold text-slate-300" for="lobbyName">Lobby Name</label>
 
-            <div class="flex">
-                <input
-                        bind:value={lobbyName}
-                        class="font-semibold p-2 bg-slate-700 focus:ring-2 focus:ring-slate-500 flex-1 px-3 text-slate-300 focus:text-slate-100 placeholder-slate-400 focus:placeholder-slate-300 rounded duration-200 ring-1 ring-slate-600 focus:outline-0"
-                        placeholder="Name"
-                        id="lobbyName"
+        <div class="flex">
+          <input
+            bind:value={lobbyName}
+            class="font-semibold p-2 bg-slate-700 focus:ring-2 focus:ring-slate-500 flex-1 px-3 text-slate-300 focus:text-slate-100 placeholder-slate-400 focus:placeholder-slate-300 rounded duration-200 ring-1 ring-slate-600 focus:outline-0"
+            id="lobbyName"
+            placeholder="Name"
                         required
                         type="text"
                 />
@@ -102,22 +109,23 @@
                 <input bind:checked={passwordAuth} id="passwordAuth" type="checkbox"/>
             </div>
             {#if passwordAuth}
-                <div class="flex mt-2">
-                    <input
-                            class="font-semibold p-2 bg-slate-700 focus:ring-2 focus:ring-slate-500 flex-1 px-3 text-slate-300 focus:text-slate-100 placeholder-slate-400 focus:placeholder-slate-300 rounded duration-200 ring-1 ring-slate-600 focus:outline-0"
-                            type="text"
-                            required
-                            bind:value={password}
-                            placeholder="Password"
-                    />
-                </div>
+              <div class="flex mt-2">
+                <input
+                  class="font-semibold p-2 bg-slate-700 focus:ring-2 focus:ring-slate-500 flex-1 px-3 text-slate-300 focus:text-slate-100 placeholder-slate-400 focus:placeholder-slate-300 rounded duration-200 ring-1 ring-slate-600 focus:outline-0"
+                  type="text"
+                  required
+                  bind:value={password}
+                  placeholder="Password"
+                />
+              </div>
             {/if}
-            <button
-                    on:click={createRoom}
-                    class="absolute text-white bg-pink-600 p-2 rounded hover:bg-pink-500 duration-200 bottom-5 mx-0 inset-x-5"
-            >Create
-            </button>
-        </form>
+        <button
+          class="absolute text-white bg-pink-600 p-2 rounded hover:bg-pink-500 duration-200 bottom-5 mx-0 inset-x-5 disabled:bg-gray-500"
+          disabled={created}
+          type="submit"
+        >Create
+        </button>
+      </form>
 
     </div>
 

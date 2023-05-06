@@ -33,6 +33,8 @@ import GameManager from '../game/GameManager';
 import SharedPixelCanvasInitializer from '../game/example/sharedPixelCanvas/SharedPixelCanvasInitializer';
 import type Game from '../game/Game';
 import { Listener } from '../../utilities/Listener';
+import type Player from './playerManager/Player';
+import { TypeRacerInitializer } from '../../../../src/lib/components/lobby/game/typewriter/server/TypeRacerInitializer';
 
 export function playerInfoToGeneralPlayerInfo(player: PlayerInfo): Omit<PlayerInfo, 'sessionKey'> {
 	return {
@@ -43,6 +45,11 @@ export function playerInfoToGeneralPlayerInfo(player: PlayerInfo): Omit<PlayerIn
 }
 
 export type JoinInfo = z.infer<typeof ZJoinInfo>;
+
+const gameManager = new GameManager();
+
+gameManager.addGame(new SharedPixelCanvasInitializer());
+gameManager.addGame(new TypeRacerInitializer());
 
 type LobbyState = 'lobby' | 'game-initializing' | 'game-running';
 export const ZLobbyEvents = z.object({
@@ -69,7 +76,7 @@ export default class LobbyHandler extends CheckedNamespaceHandler<
 	#chatRoomId: string | null = null;
 	private playerManager: PlayerManager;
 	private gameInitializer: GameInitializer<any> | null = null;
-	private gameManager: GameManager = new GameManager();
+	private gameManager: GameManager = gameManager;
 
 	private game: Game | null = null;
 	private endListener = new Listener();
@@ -199,7 +206,6 @@ export default class LobbyHandler extends CheckedNamespaceHandler<
 		});
 		this.authenticationPolicy = AuthenticationPolicyFactory.getAuthenticationPolicy(settings);
 
-		this.gameManager.addGame(new SharedPixelCanvasInitializer(this));
 		this.mountChatManager();
 		this.startPlayerChangeEvents();
 	}
@@ -305,6 +311,7 @@ export default class LobbyHandler extends CheckedNamespaceHandler<
 
 	private async chooseGame(gameInitializer: GameInitializer<any>) {
 		this.gameInitializer = gameInitializer;
+
 		this.namespace.emit('game-chosen', {
 			url: this.gameInitializer.name
 		});
@@ -316,7 +323,7 @@ export default class LobbyHandler extends CheckedNamespaceHandler<
 			});
 			const config = await this.gameInitializer.loadGameConfig(
 				players,
-				this.playerManager.getHost()
+				this.playerManager.getHost() as Player
 			);
 
 			this.namespace.emit('game-started');

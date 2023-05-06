@@ -1,6 +1,8 @@
 import type { SvelteComponent } from 'svelte';
 import PixelCanvas from './pixel/PixelCanvas.svelte';
 import PixelCanvasInit from './pixel/PixelCanvasInit.svelte';
+import Typewriter from './typewriter/Typewriter.svelte';
+import TypewriterInit from './typewriter/TypewriterInit.svelte';
 
 export type GameDescription = {
 	id: string;
@@ -35,9 +37,19 @@ gameBundles.push(
 	new GameBundle(null, PixelCanvas, PixelCanvasInit, {
 		id: 'pixel',
 		name: 'Pixel',
-		description: 'Draw pixel art with your friends!',
-		icon: 'https://cdn.discordapp.com/attachments/820416613813063976/820416648839897876/unknown.png',
+		description: 'Draw pixelart together with your friends!',
+		icon: 'pixel.svg',
 		preview: '/games/pixel.png'
+	})
+);
+
+gameBundles.push(
+	new GameBundle(null, Typewriter, TypewriterInit, {
+		id: 'typewriter',
+		name: 'Typewriter',
+		description: 'Write a story together with your friends!',
+		icon: 'typewriter.svg',
+		preview: '/games/typewriter.png'
 	})
 );
 

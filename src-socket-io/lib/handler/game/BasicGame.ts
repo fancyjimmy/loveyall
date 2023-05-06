@@ -47,7 +47,7 @@ export default abstract class BasicGame<ZHandler extends z.ZodObject<Record<stri
 
 	private endListener = new Listener();
 
-	register() {
+	start() {
 		this.players.forEach((player) => {
 			const disconnectListener = player.onDisconnect(() => this.events.disconnect(player));
 			const reconnectListener = player.onReconnect(() => this.events.reconnect(player));
